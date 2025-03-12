@@ -1,105 +1,126 @@
 const gameContainer = document.getElementById('game-container');
 const message = document.getElementById('message');
 const resetButton = document.getElementById('reset-button');
+const startButton = document.getElementById('start-button');
+const player1NameInput = document.getElementById('player1-name');
+const player2NameInput = document.getElementById('player2-name');
+const player1ScoreDisplay = document.getElementById('player1-score');
+const player2ScoreDisplay = document.getElementById('player2-score');
+const playerSetup = document.getElementById('player-setup');
+const gameInfo = document.getElementById('game-info');
 
-const cardValues = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F'];
-let cards = [];
-let flippedCards = [];
-let matchedPairs = 0;
-let gameActive = true;
+let currentPlayer = 'X';
+let board = ['', '', '', '', '', '', '', '', ''];
+let gameActive = false;
+let player1Name = 'Player 1';
+let player2Name = 'Player 2';
+let player1Score = 0;
+let player2Score = 0;
 
-// Shuffle the cards
-function shuffleCards() {
-  for (let i = cardValues.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [cardValues[i], cardValues[j]] = [cardValues[j], cardValues[i]];
+// Winning combinations
+const winningCombinations = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+  [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+  [0, 4, 8], [2, 4, 6]             // Diagonals
+];
+
+// Create the board
+function createBoard() {
+  gameContainer.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('div');
+    cell.classList.add('cell');
+    cell.dataset.index = i;
+    gameContainer.appendChild(cell);
+    cell.addEventListener('click', handleCellClick);
   }
 }
 
-// Create the cards
-function createCards() {
-  shuffleCards();
-  cards = [];
-  for (let i = 0; i < cardValues.length; i++) {
-    const card = document.createElement('div');
-    card.classList.add('card');
-    card.dataset.value = cardValues[i];
+// Handle cell click
+function handleCellClick(clickedCellEvent) {
+  const clickedCell = clickedCellEvent.target;
+  const clickedCellIndex = parseInt(clickedCell.dataset.index);
 
-    const cardFront = document.createElement('div');
-    cardFront.classList.add('card-face', 'card-front');
-
-    const cardBack = document.createElement('div');
-    cardBack.classList.add('card-face', 'card-back');
-    cardBack.textContent = cardValues[i];
-
-    card.appendChild(cardFront);
-    card.appendChild(cardBack);
-    gameContainer.appendChild(card);
-    card.addEventListener('click', handleCardClick);
-    cards.push(card);
-  }
-}
-
-// Handle card click
-function handleCardClick(event) {
-  if (!gameActive) return;
-  const clickedCard = event.currentTarget;
-
-  if (clickedCard.classList.contains('flipped') || flippedCards.length >= 2) {
+  if (board[clickedCellIndex] !== '' || !gameActive) {
     return;
   }
 
-  clickedCard.classList.add('flipped');
-  flippedCards.push(clickedCard);
+  board[clickedCellIndex] = currentPlayer;
+  clickedCell.textContent = currentPlayer;
 
-  if (flippedCards.length === 2) {
+  if (checkWin()) {
+    message.textContent = `${currentPlayer === 'X' ? player1Name : player2Name} wins!`;
+    updateScore();
     gameActive = false;
-    setTimeout(checkMatch, 1000);
+    return;
   }
+
+  if (checkDraw()) {
+    message.textContent = "It's a draw!";
+    gameActive = false;
+    return;
+  }
+
+  switchPlayer();
 }
 
-// Check for a match
-function checkMatch() {
-  const [card1, card2] = flippedCards;
-  const value1 = card1.dataset.value;
-  const value2 = card2.dataset.value;
+// Switch player
+function switchPlayer() {
+  currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+  message.textContent = `${currentPlayer === 'X' ? player1Name : player2Name}'s turn`;
+}
 
-  if (value1 === value2) {
-    message.textContent = 'Match!';
-    matchedPairs++;
-    card1.removeEventListener('click', handleCardClick);
-    card2.removeEventListener('click', handleCardClick);
-    if (matchedPairs === cardValues.length / 2) {
-      gameOver();
+// Check for win
+function checkWin() {
+  for (const combination of winningCombinations) {
+    const [a, b, c] = combination;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return true;
     }
-  } else {
-    message.textContent = 'Try again!';
-    card1.classList.remove('flipped');
-    card2.classList.remove('flipped');
   }
-
-  flippedCards = [];
-  gameActive = true;
+  return false;
 }
 
-// Game over
-function gameOver() {
-  message.textContent = 'You win!';
-  gameActive = false;
+// Check for draw
+function checkDraw() {
+  return board.every(cell => cell !== '');
+}
+
+// Update the score
+function updateScore() {
+  if (currentPlayer === 'X') {
+    player1Score++;
+    player1ScoreDisplay.textContent = `${player1Name} (X): ${player1Score}`;
+  } else {
+    player2Score++;
+    player2ScoreDisplay.textContent = `${player2Name} (O): ${player2Score}`;
+  }
 }
 
 // Reset the game
 function resetGame() {
+  currentPlayer = 'X';
+  board = ['', '', '', '', '', '', '', '', ''];
   gameActive = true;
-  matchedPairs = 0;
-  flippedCards = [];
-  message.textContent = '';
-  gameContainer.innerHTML = '';
-  createCards();
+  message.textContent = `${player1Name}'s turn`;
+  const cells = document.querySelectorAll('.cell');
+  cells.forEach(cell => cell.textContent = '');
 }
 
-// Add event listener to reset button
-resetButton.addEventListener('click', resetGame);
-
 // Start the game
-createCards();
+function startGame() {
+  player1Name = player1NameInput.value || 'Player 1';
+  player2Name = player2NameInput.value || 'Player 2';
+  player1ScoreDisplay.textContent = `${player1Name} (X): 0`;
+  player2ScoreDisplay.textContent = `${player2Name} (O): 0`;
+  message.textContent = `${player1Name}'s turn`;
+  playerSetup.style.display = 'none';
+  gameInfo.style.display = 'flex';
+  resetButton.style.display = 'block';
+  gameActive = true;
+  createBoard();
+}
+
+// Add event listeners
+resetButton.addEventListener('click', resetGame);
+startButton.addEventListener('click', startGame);

@@ -9,47 +9,42 @@ body {
     margin: 0;
   }
   
-  #game-container {
-    display: grid;
-    grid-template-columns: repeat(4, 100px);
-    grid-template-rows: repeat(3, 100px);
-    gap: 10px;
-    perspective: 1000px; /* For 3D flip effect */
+  #player-setup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin-bottom: 20px;
   }
   
-  .card {
+  #player-setup label {
+    margin-top: 10px;
+  }
+  
+  #game-info {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  #game-container {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+    gap: 5px;
+    margin-bottom: 20px;
+  }
+  
+  .cell {
     width: 100px;
     height: 100px;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.5s;
-    cursor: pointer;
-  }
-  
-  .card.flipped {
-    transform: rotateY(180deg);
-  }
-  
-  .card-face {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    backface-visibility: hidden;
+    background-color: #eee;
+    border: 2px solid #333;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 40px;
-    border: 2px solid #333;
-  }
-  
-  .card-front {
-    background-color: #eee;
-  }
-  
-  .card-back {
-    background-color: #777;
-    transform: rotateY(180deg);
+    font-size: 60px;
+    cursor: pointer;
+    user-select: none;
   }
   
   #message {
@@ -57,7 +52,7 @@ body {
     margin-bottom: 20px;
   }
   
-  #reset-button {
+  #reset-button, #start-button {
     padding: 10px 20px;
     font-size: 16px;
     cursor: pointer;

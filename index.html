@@ -1,15 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Memory Card Game</title>
+  <title>Tic-Tac-Toe</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Memory Card Game</h1>
+  <h1>Tic-Tac-Toe</h1>
+  <div id="player-setup">
+    <label for="player1-name">Player 1 (X):</label>
+    <input type="text" id="player1-name" value="Player 1">
+    <label for="player2-name">Player 2 (O):</label>
+    <input type="text" id="player2-name" value="Player 2">
+    <button id="start-button">Start Game</button>
+  </div>
+  <div id="game-info" style="display: none;">
+    <div id="player1-score">Player 1 (X): 0</div>
+    <div id="player2-score">Player 2 (O): 0</div>
+  </div>
   <div id="message"></div>
   <div id="game-container">
-    </div>
-  <button id="reset-button">Reset</button>
+  </div>
+  <button id="reset-button" style="display: none;">Reset</button>
   <script src="script.js"></script>
 </body>
 </html>
