@@ -4,17 +4,52 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #333;
-  color: white;
+  background-color: #ffc0cb; /* Pink background */
+  color: #333;
   font-family: sans-serif;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.game-container {
+  display: flex;
+  gap: 20px;
 }
 
 #gameCanvas {
   background-color: #000;
-  border: 2px solid white;
+  border: 2px solid #333;
 }
 
-#score {
-  margin-top: 20px;
-  font-size: 1.5em;
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#nextPiece {
+  background-color: #eee;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+#nextCanvas {
+  background-color: #000;
+  border: 2px solid #333;
+}
+
+#score,
+#level {
+  background-color: #eee;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+/* Rounded bricks */
+.rounded {
+  border-radius: 50%;
 }
