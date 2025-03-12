@@ -1,135 +1,99 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const scoreDisplay = document.getElementById('score');
 
-const gridSize = 20;
-let snake = [{ x: 10, y: 10 }];
-let food = {};
-let direction = 'right';
-let score = 0;
-let gameOver = false;
-let gameLoop;
-let gameStarted = false;
-let gameSpeed = 150;
+const gravity = 0.5;
+const jumpForce = -10;
 
-function generateFood() {
-    food = {
-        x: Math.floor(Math.random() * (canvas.width / gridSize)),
-        y: Math.floor(Math.random() * (canvas.height / gridSize))
-    };
+// Player
+const player = {
+    x: 50,
+    y: 100,
+    width: 30,
+    height: 30,
+    color: 'red',
+    velocityY: 0,
+    isJumping: false,
+    draw: function() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    },
+    update: function() {
+        this.velocityY += gravity;
+        this.y += this.velocityY;
+
+        // Keep player within the canvas
+        if (this.y + this.height > canvas.height) {
+            this.y = canvas.height - this.height;
+            this.velocityY = 0;
+            this.isJumping = false;
+        }
+    },
+    jump: function() {
+        if (!this.isJumping) {
+            this.velocityY = jumpForce;
+            this.isJumping = true;
+        }
+    }
+};
+
+// Platforms
+const platforms = [
+    { x: 0, y: canvas.height - 20, width: canvas.width, height: 20, color: 'green' }, // Ground
+    { x: 150, y: 250, width: 100, height: 20, color: 'green' },
+    { x: 350, y: 150, width: 100, height: 20, color: 'green' },
+];
+
+function drawPlatforms() {
+    platforms.forEach(platform => {
+        ctx.fillStyle = platform.color;
+        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+    });
 }
 
-function draw() {
+// Collision detection
+function checkCollision(rect1, rect2) {
+    return (
+        rect1.x < rect2.x + rect2.width &&
+        rect1.x + rect1.width > rect2.x &&
+        rect1.y < rect2.y + rect2.height &&
+        rect1.y + rect1.height > rect2.y
+    );
+}
+
+// Game loop
+function update() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!gameStarted) {
-        ctx.fillStyle = 'white';
-        ctx.font = '20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Press Space to Start', canvas.width / 2, canvas.height / 2);
-        return;
-    }
+    player.update();
 
-    ctx.fillStyle = 'red';
-    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
-
-    for (let i = 0; i < snake.length; i++) {
-        ctx.fillStyle = i === 0 ? 'green' : 'lime';
-        ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
-        ctx.strokeStyle = 'darkgreen';
-        ctx.strokeRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
-    }
-}
-
-function update() {
-    if (!gameStarted) return;
-
-    if (gameOver) {
-        clearInterval(gameLoop);
-        if (confirm(`Game Over! Score: ${score}\nRetry?`)) {
-            resetGame();
+    // Platform collision
+    platforms.forEach(platform => {
+        if (checkCollision(player, platform)) {
+            if (player.velocityY > 0) {
+                player.y = platform.y - player.height;
+                player.velocityY = 0;
+                player.isJumping = false;
+            }
         }
-        return;
-    }
+    });
 
-    const head = { x: snake[0].x, y: snake[0].y };
+    drawPlatforms();
+    player.draw();
 
-    switch (direction) {
-        case 'up':
-            head.y--;
-            break;
-        case 'down':
-            head.y++;
-            break;
-        case 'left':
-            head.x--;
-            break;
-        case 'right':
-            head.x++;
-            break;
-    }
-
-    if (head.x < 0 || head.x >= canvas.width / gridSize || head.y < 0 || head.y >= canvas.height / gridSize) {
-        gameOver = true;
-    }
-
-    for (let i = 1; i < snake.length; i++) {
-        if (head.x === snake[i].x && head.y === snake[i].y) {
-            gameOver = true;
-        }
-    }
-
-    if (head.x === food.x && head.y === food.y) {
-        score++;
-        scoreDisplay.textContent = `Score: ${score}`;
-        generateFood();
-    } else {
-        snake.pop();
-    }
-
-    snake.unshift(head);
-
-    draw();
+    requestAnimationFrame(update);
 }
 
-function resetGame() {
-    snake = [{ x: 10, y: 10 }];
-    food = {};
-    direction = 'right';
-    score = 0;
-    gameOver = false;
-    generateFood();
-    scoreDisplay.textContent = `Score: ${score}`;
-    gameLoop = setInterval(update, gameSpeed);
-}
-
-function startGame() {
-    gameStarted = true;
-    generateFood();
-    gameLoop = setInterval(update, gameSpeed);
-}
-
+// Event listeners
 document.addEventListener('keydown', (e) => {
-    if (e.key === ' ') {
-        if (!gameStarted) {
-            startGame();
-        }
-    } else {
-        switch (e.key) {
-            case 'ArrowUp':
-                if (direction !== 'down' && gameStarted) direction = 'up';
-                break;
-            case 'ArrowDown':
-                if (direction !== 'up' && gameStarted) direction = 'down';
-                break;
-            case 'ArrowLeft':
-                if (direction !== 'right' && gameStarted) direction = 'left';
-                break;
-            case 'ArrowRight':
-                if (direction !== 'left' && gameStarted) direction = 'right';
-                break;
-        }
+    if (e.key === 'ArrowUp') {
+        player.jump();
+    }
+    if (e.key === 'ArrowLeft') {
+        player.x -= 5;
+    }
+    if (e.key === 'ArrowRight') {
+        player.x += 5;
     }
 });
 
-draw();
+update();
