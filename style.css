@@ -11,29 +11,15 @@ body {
   }
   
   #game-container {
-    display: flex;
-    gap: 20px;
+    border: 2px solid white;
     margin-top: 20px;
   }
   
   #gameCanvas {
     background-color: #000;
-    border: 2px solid white;
-  }
-  
-  #next-piece-container {
-    border: 2px solid white;
-    padding: 10px;
-    text-align: center;
-  }
-  
-  #nextPieceCanvas {
-    background-color: #000;
   }
   
   .game-info {
-    display: flex;
-    gap: 20px;
     margin-bottom: 10px;
   }
   
