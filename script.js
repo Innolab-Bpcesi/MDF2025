@@ -1,162 +1,105 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreDisplay = document.getElementById('score');
+const gameContainer = document.getElementById('game-container');
+const message = document.getElementById('message');
+const resetButton = document.getElementById('reset-button');
 
-const GRID_SIZE = 20;
-const CANVAS_WIDTH = canvas.width;
-const CANVAS_HEIGHT = canvas.height;
+const cardValues = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F'];
+let cards = [];
+let flippedCards = [];
+let matchedPairs = 0;
+let gameActive = true;
 
-// Game variables
-let snake = [{ x: 10, y: 10 }];
-let food = {};
-let direction = 'right';
-let score = 0;
-let gameOver = false;
-let gameSpeed = 100; // Initial game speed (milliseconds per frame)
-
-// Generate food
-function generateFood() {
-  food = {
-    x: Math.floor(Math.random() * (CANVAS_WIDTH / GRID_SIZE)),
-    y: Math.floor(Math.random() * (CANVAS_HEIGHT / GRID_SIZE)),
-  };
-  // Check if food spawns inside the snake
-  for (let i = 0; i < snake.length; i++) {
-    if (food.x === snake[i].x && food.y === snake[i].y) {
-      generateFood();
-      return;
-    }
+// Shuffle the cards
+function shuffleCards() {
+  for (let i = cardValues.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cardValues[i], cardValues[j]] = [cardValues[j], cardValues[i]];
   }
 }
 
-// Draw a block
-function drawBlock(x, y, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-  ctx.strokeStyle = 'black';
-  ctx.strokeRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-}
+// Create the cards
+function createCards() {
+  shuffleCards();
+  cards = [];
+  for (let i = 0; i < cardValues.length; i++) {
+    const card = document.createElement('div');
+    card.classList.add('card');
+    card.dataset.value = cardValues[i];
 
-// Draw the snake
-function drawSnake() {
-  for (let i = 0; i < snake.length; i++) {
-    drawBlock(snake[i].x, snake[i].y, i === 0 ? 'green' : 'lime');
+    const cardFront = document.createElement('div');
+    cardFront.classList.add('card-face', 'card-front');
+
+    const cardBack = document.createElement('div');
+    cardBack.classList.add('card-face', 'card-back');
+    cardBack.textContent = cardValues[i];
+
+    card.appendChild(cardFront);
+    card.appendChild(cardBack);
+    gameContainer.appendChild(card);
+    card.addEventListener('click', handleCardClick);
+    cards.push(card);
   }
 }
 
-// Draw the food
-function drawFood() {
-  drawBlock(food.x, food.y, 'red');
-}
+// Handle card click
+function handleCardClick(event) {
+  if (!gameActive) return;
+  const clickedCard = event.currentTarget;
 
-// Move the snake
-function moveSnake() {
-  const head = { x: snake[0].x, y: snake[0].y };
-
-  switch (direction) {
-    case 'up':
-      head.y--;
-      break;
-    case 'down':
-      head.y++;
-      break;
-    case 'left':
-      head.x--;
-      break;
-    case 'right':
-      head.x++;
-      break;
-  }
-
-  // Check for collisions
-  if (checkCollision(head)) {
-    gameOver = true;
+  if (clickedCard.classList.contains('flipped') || flippedCards.length >= 2) {
     return;
   }
 
-  snake.unshift(head);
+  clickedCard.classList.add('flipped');
+  flippedCards.push(clickedCard);
 
-  // Check if snake ate food
-  if (head.x === food.x && head.y === food.y) {
-    score++;
-    updateScore();
-    generateFood();
-    increaseGameSpeed();
-  } else {
-    snake.pop();
+  if (flippedCards.length === 2) {
+    gameActive = false;
+    setTimeout(checkMatch, 1000);
   }
 }
 
-// Check for collisions
-function checkCollision(head) {
-  // Wall collision
-  if (head.x < 0 || head.x >= CANVAS_WIDTH / GRID_SIZE || head.y < 0 || head.y >= CANVAS_HEIGHT / GRID_SIZE) {
-    return true;
-  }
+// Check for a match
+function checkMatch() {
+  const [card1, card2] = flippedCards;
+  const value1 = card1.dataset.value;
+  const value2 = card2.dataset.value;
 
-  // Self collision
-  for (let i = 1; i < snake.length; i++) {
-    if (head.x === snake[i].x && head.y === snake[i].y) {
-      return true;
+  if (value1 === value2) {
+    message.textContent = 'Match!';
+    matchedPairs++;
+    card1.removeEventListener('click', handleCardClick);
+    card2.removeEventListener('click', handleCardClick);
+    if (matchedPairs === cardValues.length / 2) {
+      gameOver();
     }
+  } else {
+    message.textContent = 'Try again!';
+    card1.classList.remove('flipped');
+    card2.classList.remove('flipped');
   }
 
-  return false;
+  flippedCards = [];
+  gameActive = true;
 }
-
-// Update the score
-function updateScore() {
-  scoreDisplay.textContent = `Score: ${score}`;
-}
-
-// Increase game speed
-function increaseGameSpeed() {
-  if (gameSpeed > 20) {
-    gameSpeed -= 5; // Increase speed by decreasing the delay
-  }
-}
-
-// Handle key presses
-window.addEventListener('keydown', (event) => {
-  switch (event.key) {
-    case 'ArrowUp':
-      if (direction !== 'down') direction = 'up';
-      break;
-    case 'ArrowDown':
-      if (direction !== 'up') direction = 'down';
-      break;
-    case 'ArrowLeft':
-      if (direction !== 'right') direction = 'left';
-      break;
-    case 'ArrowRight':
-      if (direction !== 'left') direction = 'right';
-      break;
-  }
-});
 
 // Game over
-function gameOverFunc() {
-  alert('Game Over! Score: ' + score);
-  // Reset the game (for now, just reload the page)
-  location.reload();
+function gameOver() {
+  message.textContent = 'You win!';
+  gameActive = false;
 }
 
-// Game loop
-function gameLoop() {
-  if (gameOver) {
-    gameOverFunc();
-    return;
-  }
-
-  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-  moveSnake();
-  drawSnake();
-  drawFood();
-
-  setTimeout(gameLoop, gameSpeed);
+// Reset the game
+function resetGame() {
+  gameActive = true;
+  matchedPairs = 0;
+  flippedCards = [];
+  message.textContent = '';
+  gameContainer.innerHTML = '';
+  createCards();
 }
+
+// Add event listener to reset button
+resetButton.addEventListener('click', resetGame);
 
 // Start the game
-generateFood();
-gameLoop();
+createCards();

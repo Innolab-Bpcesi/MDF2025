@@ -1,26 +1,65 @@
 body {
     font-family: sans-serif;
-    background-color: #333;
+    background-color: #f0f0f0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
     margin: 0;
-    color: white;
   }
   
   #game-container {
-    border: 2px solid white;
-    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 100px);
+    grid-template-rows: repeat(3, 100px);
+    gap: 10px;
+    perspective: 1000px; /* For 3D flip effect */
+    margin-bottom: 20px;
   }
   
-  #gameCanvas {
-    background-color: #000;
+  .card {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+    cursor: pointer;
   }
   
-  .game-info {
-    margin-bottom: 10px;
+  .card.flipped {
+    transform: rotateY(180deg);
   }
   
+  .card-face {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    backface-visibility: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    border: 2px solid #333;
+  }
+  
+  .card-front {
+    background-color: #eee;
+  }
+  
+  .card-back {
+    background-color: #777;
+    transform: rotateY(180deg);
+  }
+  
+  #message {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  #reset-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
   
