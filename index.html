@@ -1,31 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Monopoly</title>
+  <title>Minesweeper</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Monopoly</h1>
-
-  <div id="game-container">
-    <div id="board">
-      <!-- Board squares will be generated here -->
-    </div>
-
-    <div id="player-info">
-      <!-- Player information will be displayed here -->
-    </div>
-
-    <div id="dice-container">
-      <button id="roll-dice">Roll Dice</button>
-      <div id="dice-result"></div>
-    </div>
-    <div id="message-container">
-      <p id="message"></p>
-    </div>
+  <h1>Minesweeper</h1>
+  <div class="controls">
+    <div id="mines-left">Mines: 0</div>
+    <div id="timer">Time: 0</div>
   </div>
-
+  <div id="game-container">
+    <div id="board"></div>
+  </div>
+  <div id="message"></div>
   <script src="script.js"></script>
 </body>
 </html>
-
