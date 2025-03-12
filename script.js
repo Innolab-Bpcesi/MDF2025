@@ -1,172 +1,214 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreDisplay = document.getElementById('score');
+const gameboard = document.getElementById('gameboard');
+const message = document.getElementById('message');
+const blackScoreDisplay = document.getElementById('blackScore');
+const whiteScoreDisplay = document.getElementById('whiteScore');
+const resetButton = document.getElementById('resetButton');
 
-// Ball properties
-const ball = {
-    x: canvas.width / 2,
-    y: canvas.height - 30,
-    radius: 10,
-    dx: 2,
-    dy: -2,
-};
+let board = [];
+let currentPlayer = 'black';
+let gameActive = true;
 
-// Paddle properties
-const paddle = {
-    x: canvas.width / 2 - 50,
-    y: canvas.height - 20,
-    width: 100,
-    height: 10,
-    dx: 5,
-};
+const directions = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],           [0, 1],
+    [1, -1], [1, 0], [1, 1]
+];
 
-// Bricks properties
-const brick = {
-    rowCount: 3,
-    columnCount: 5,
-    width: 75,
-    height: 20,
-    padding: 10,
-    offsetTop: 30,
-    offsetLeft: 30,
-};
-
-// Create bricks array
-const bricks = [];
-for (let c = 0; c < brick.columnCount; c++) {
-    bricks[c] = [];
-    for (let r = 0; r < brick.rowCount; r++) {
-        bricks[c][r] = { x: 0, y: 0, status: 1 };
+function createBoard() {
+    for (let i = 0; i < 8; i++) {
+        board[i] = [];
+        for (let j = 0; j < 8; j++) {
+            board[i][j] = null;
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.row = i;
+            cell.dataset.col = j;
+            cell.addEventListener('click', handleCellClick);
+            gameboard.appendChild(cell);
+        }
     }
+    board[3][3] = 'white';
+    board[3][4] = 'black';
+    board[4][3] = 'black';
+    board[4][4] = 'white';
 }
 
-// Score
-let score = 0;
-
-// Paddle movement
-let rightPressed = false;
-let leftPressed = false;
-
-// Event listeners for paddle movement
-document.addEventListener('keydown', keyDownHandler, false);
-document.addEventListener('keyup', keyUpHandler, false);
-
-function keyDownHandler(e) {
-    if (e.key === 'Right' || e.key === 'ArrowRight') {
-        rightPressed = true;
-    } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
-        leftPressed = true;
-    }
-}
-
-function keyUpHandler(e) {
-    if (e.key === 'Right' || e.key === 'ArrowRight') {
-        rightPressed = false;
-    } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
-        leftPressed = false;
-    }
-}
-
-// Draw functions
-function drawBall() {
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.closePath();
-}
-
-function drawPaddle() {
-    ctx.beginPath();
-    ctx.rect(paddle.x, paddle.y, paddle.width, paddle.height);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.closePath();
-}
-
-function drawBricks() {
-    for (let c = 0; c < brick.columnCount; c++) {
-        for (let r = 0; r < brick.rowCount; r++) {
-            if (bricks[c][r].status === 1) {
-                const brickX = c * (brick.width + brick.padding) + brick.offsetLeft;
-                const brickY = r * (brick.height + brick.padding) + brick.offsetTop;
-                bricks[c][r].x = brickX;
-                bricks[c][r].y = brickY;
-                ctx.beginPath();
-                ctx.rect(brickX, brickY, brick.width, brick.height);
-                ctx.fillStyle = 'white';
-                ctx.fill();
-                ctx.closePath();
+function drawBoard() {
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const cell = gameboard.querySelector(`[data-row="${i}"][data-col="${j}"]`);
+            cell.innerHTML = '';
+            if (board[i][j]) {
+                const disc = document.createElement('div');
+                disc.classList.add('disc', board[i][j]);
+                cell.appendChild(disc);
             }
         }
     }
 }
 
-// Collision detection
-function collisionDetection() {
-    for (let c = 0; c < brick.columnCount; c++) {
-        for (let r = 0; r < brick.rowCount; r++) {
-            const b = bricks[c][r];
-            if (b.status === 1) {
-                if (
-                    ball.x > b.x &&
-                    ball.x < b.x + brick.width &&
-                    ball.y > b.y &&
-                    ball.y < b.y + brick.height
-                ) {
-                    ball.dy = -ball.dy;
-                    b.status = 0;
-                    score++;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                    if (score === brick.rowCount * brick.columnCount) {
-                        alert('YOU WIN, CONGRATULATIONS!');
-                        document.location.reload();
-                    }
-                }
-            }
-        }
-    }
-}
+function handleCellClick(event) {
+    if (!gameActive) return;
 
-// Game over
-function gameOver() {
-    alert('GAME OVER');
-    document.location.reload();
-}
+    const cell = event.target;
+    const row = parseInt(cell.dataset.row);
+    const col = parseInt(cell.dataset.col);
 
-// Update function
-function update() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBricks();
-    drawBall();
-    drawPaddle();
-    collisionDetection();
-
-    // Ball collision with walls
-    if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
-        ball.dx = -ball.dx;
-    }
-    if (ball.y + ball.dy < ball.radius) {
-        ball.dy = -ball.dy;
-    } else if (ball.y + ball.dy > canvas.height - ball.radius) {
-        if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
-            ball.dy = -ball.dy;
+    if (isValidMove(row, col)) {
+        placeDisc(row, col);
+        flipDiscs(row, col);
+        drawBoard();
+        updateScore();
+        if (checkGameOver()) {
+            endGame();
         } else {
-            gameOver();
+            switchPlayer();
         }
     }
-
-    // Paddle movement
-    if (rightPressed && paddle.x < canvas.width - paddle.width) {
-        paddle.x += paddle.dx;
-    } else if (leftPressed && paddle.x > 0) {
-        paddle.x -= paddle.dx;
-    }
-
-    ball.x += ball.dx;
-    ball.y += ball.dy;
-
-    requestAnimationFrame(update);
 }
 
-update();
+function isValidMove(row, col) {
+    if (board[row][col]) return false;
+
+    for (const dir of directions) {
+        if (checkDirection(row, col, dir[0], dir[1])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function checkDirection(row, col, rowDir, colDir) {
+    let r = row + rowDir;
+    let c = col + colDir;
+    let foundOpponent = false;
+
+    while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+        if (board[r][c] === null) return false;
+        if (board[r][c] === currentPlayer) return foundOpponent;
+        foundOpponent = true;
+        r += rowDir;
+        c += colDir;
+    }
+    return false;
+}
+
+function placeDisc(row, col) {
+    board[row][col] = currentPlayer;
+}
+
+function flipDiscs(row, col) {
+    for (const dir of directions) {
+        flipDirection(row, col, dir[0], dir[1]);
+    }
+}
+
+function flipDirection(row, col, rowDir, colDir) {
+    let r = row + rowDir;
+    let c = col + colDir;
+    const discsToFlip = [];
+
+    while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+        if (board[r][c] === null) return;
+        if (board[r][c] === currentPlayer) {
+            for (const disc of discsToFlip) {
+                board[disc[0]][disc[1]] = currentPlayer;
+            }
+            return;
+        }
+        discsToFlip.push([r, c]);
+        r += rowDir;
+        c += colDir;
+    }
+}
+
+function switchPlayer() {
+    currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+    message.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn`;
+    if (!hasValidMoves()) {
+        currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+        message.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn (No valid moves for the previous player)`;
+        if (!hasValidMoves()) {
+            endGame();
+        }
+    }
+}
+
+function hasValidMoves() {
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            if (isValidMove(i, j)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function updateScore() {
+    let blackScore = 0;
+    let whiteScore = 0;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            if (board[i][j] === 'black') blackScore++;
+            else if (board[i][j] === 'white') whiteScore++;
+        }
+    }
+    blackScoreDisplay.textContent = `Black: ${blackScore}`;
+    whiteScoreDisplay.textContent = `White: ${whiteScore}`;
+}
+
+function checkGameOver() {
+    return !hasValidMoves() && !hasValidMovesForOpponent();
+}
+
+function hasValidMovesForOpponent() {
+    const opponent = currentPlayer === 'black' ? 'white' : 'black';
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            if (board[i][j] === null) {
+                const tempCurrentPlayer = currentPlayer;
+                currentPlayer = opponent;
+                const isValid = isValidMove(i, j);
+                currentPlayer = tempCurrentPlayer;
+                if (isValid) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function endGame() {
+    gameActive = false;
+    let blackScore = 0;
+    let whiteScore = 0;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            if (board[i][j] === 'black') blackScore++;
+            else if (board[i][j] === 'white') whiteScore++;
+        }
+    }
+    if (blackScore > whiteScore) {
+        message.textContent = `Black wins!`;
+    } else if (whiteScore > blackScore) {
+        message.textContent = `White wins!`;
+    } else {
+        message.textContent = `It's a draw!`;
+    }
+}
+
+function resetGame() {
+    board = [];
+    currentPlayer = 'black';
+    gameActive = true;
+    createBoard();
+    drawBoard();
+    updateScore();
+    message.textContent = "Black's turn";
+}
+
+createBoard();
+drawBoard();
+updateScore();
+message.textContent = "Black's turn";
+resetButton.addEventListener('click', resetGame);
