@@ -1,13 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Platformer</title>
+  <title>Tetris</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Platformer</h1>
+  <h1>Tetris</h1>
+  <div class="game-info">
+    <div id="score">Score: 0</div>
+    <div id="level">Level: 1</div>
+  </div>
   <div id="game-container">
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <canvas id="gameCanvas" width="320" height="640"></canvas>
+    <div id="next-piece-container">
+      <h2>Next</h2>
+      <canvas id="nextPieceCanvas" width="160" height="160"></canvas>
+    </div>
   </div>
   <script src="script.js"></script>
 </body>
