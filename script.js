@@ -1,202 +1,153 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const scoreDisplay = document.getElementById('score');
+const player1ScoreDisplay = document.getElementById('player1-score');
+const player2ScoreDisplay = document.getElementById('player2-score');
 
-const GRID_SIZE = 16;
 const CANVAS_WIDTH = canvas.width;
 const CANVAS_HEIGHT = canvas.height;
 
 // Game variables
-let score = 0;
-let pacman;
-let ghosts = [];
-let cherry;
-let isPowerUpActive = false;
-let powerUpTimer = 0;
+let player1Score = 0;
+let player2Score = 0;
 
-// Pacman
-class Pacman {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.radius = GRID_SIZE / 2 - 2;
-        this.direction = 'right';
-        this.speed = 2;
-    }
-    draw() {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-        ctx.fill();
-    }
-    update() {
-        if (this.direction === 'right') {
-            this.x += this.speed;
-        } else if (this.direction === 'left') {
-            this.x -= this.speed;
-        } else if (this.direction === 'up') {
-            this.y -= this.speed;
-        } else if (this.direction === 'down') {
-            this.y += this.speed;
-        }
-        // Keep Pacman within the canvas bounds
-        this.x = Math.max(this.radius, Math.min(this.x, CANVAS_WIDTH - this.radius));
-        this.y = Math.max(this.radius, Math.min(this.y, CANVAS_HEIGHT - this.radius));
-    }
+// Paddle
+class Paddle {
+  constructor(x, y, width, height, color, upKey, downKey) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.color = color;
+    this.speed = 5;
+    this.upKey = upKey;
+    this.downKey = downKey;
+  }
+
+  draw() {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+
+  update() {
+    // Keep paddle within canvas bounds
+    this.y = Math.max(0, Math.min(this.y, CANVAS_HEIGHT - this.height));
+  }
 }
 
-// Ghost
-class Ghost {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.radius = GRID_SIZE / 2 - 2;
-        this.direction = 'left';
-        this.speed = 1;
-    }
-    draw() {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-        ctx.fill();
-    }
-    update() {
-        if (this.direction === 'right') {
-            this.x += this.speed;
-            if (this.x > CANVAS_WIDTH - this.radius) this.direction = 'left';
-        } else if (this.direction === 'left') {
-            this.x -= this.speed;
-            if (this.x < this.radius) this.direction = 'right';
-        } else if (this.direction === 'up') {
-            this.y -= this.speed;
-            if (this.y < this.radius) this.direction = 'down';
-        } else if (this.direction === 'down') {
-            this.y += this.speed;
-            if (this.y > CANVAS_HEIGHT - this.radius) this.direction = 'up';
-        }
-        this.changeDirection();
-    }
+// Ball
+class Ball {
+  constructor(x, y, radius, color) {
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.color = color;
+    this.speed = 4;
+    this.velocityX = this.speed;
+    this.velocityY = this.speed;
+  }
 
-    changeDirection(){
-        const change = Math.random();
-        if(change < 0.05){
-            const newDirection = ['up', 'down', 'left', 'right'];
-            this.direction = newDirection[Math.floor(Math.random() * newDirection.length)];
-        }
+  draw() {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  update() {
+    this.x += this.velocityX;
+    this.y += this.velocityY;
+
+    // Bounce off top and bottom walls
+    if (this.y + this.radius > CANVAS_HEIGHT || this.y - this.radius < 0) {
+      this.velocityY = -this.velocityY;
     }
+  }
 }
 
-// Cherry (Power-Up)
-class Cherry {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.radius = 6;
-    }
-    draw() {
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-        ctx.fill();
-    }
-}
-
-// Initialize the game
-function initializeGame() {
-    pacman = new Pacman(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 'yellow');
-    ghosts.push(new Ghost(CANVAS_WIDTH / 4, CANVAS_HEIGHT / 4, 'red'));
-    cherry = new Cherry(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 4);
-
-    window.addEventListener('keydown', handleKeyDown);
-    gameLoop();
-}
+// Create paddles and ball
+const player1Paddle = new Paddle(10, CANVAS_HEIGHT / 2 - 50, 10, 100, 'white', 'w', 's');
+const player2Paddle = new Paddle(CANVAS_WIDTH - 20, CANVAS_HEIGHT / 2 - 50, 10, 100, 'white', 'ArrowUp', 'ArrowDown');
+const ball = new Ball(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 10, 'white');
 
 // Handle key presses
-function handleKeyDown(event) {
-    switch (event.key) {
-        case 'ArrowUp':
-            pacman.direction = 'up';
-            break;
-        case 'ArrowDown':
-            pacman.direction = 'down';
-            break;
-        case 'ArrowLeft':
-            pacman.direction = 'left';
-            break;
-        case 'ArrowRight':
-            pacman.direction = 'right';
-            break;
-    }
+const keys = {};
+window.addEventListener('keydown', (event) => {
+  keys[event.key] = true;
+});
+window.addEventListener('keyup', (event) => {
+  keys[event.key] = false;
+});
+
+// Update paddles based on key presses
+function updatePaddles() {
+  if (keys[player1Paddle.upKey] && player1Paddle.y > 0) {
+    player1Paddle.y -= player1Paddle.speed;
+  }
+  if (keys[player1Paddle.downKey] && player1Paddle.y < CANVAS_HEIGHT - player1Paddle.height) {
+    player1Paddle.y += player1Paddle.speed;
+  }
+  if (keys[player2Paddle.upKey] && player2Paddle.y > 0) {
+    player2Paddle.y -= player2Paddle.speed;
+  }
+  if (keys[player2Paddle.downKey] && player2Paddle.y < CANVAS_HEIGHT - player2Paddle.height) {
+    player2Paddle.y += player2Paddle.speed;
+  }
 }
 
-// Update the score
-function updateScore(amount) {
-    score += amount;
-    scoreDisplay.textContent = `Score: ${score}`;
+// Check for collisions
+function checkCollisions() {
+  // Ball collision with paddles
+  const paddleHit = (ball.x - ball.radius < player1Paddle.x + player1Paddle.width &&
+    ball.y > player1Paddle.y &&
+    ball.y < player1Paddle.y + player1Paddle.height) ||
+    (ball.x + ball.radius > player2Paddle.x &&
+      ball.y > player2Paddle.y &&
+      ball.y < player2Paddle.y + player2Paddle.height);
+
+  if (paddleHit) {
+    ball.velocityX = -ball.velocityX;
+  }
+
+  // Ball out of bounds
+  if (ball.x - ball.radius < 0) {
+    player2Score++;
+    resetBall();
+  } else if (ball.x + ball.radius > CANVAS_WIDTH) {
+    player1Score++;
+    resetBall();
+  }
+}
+
+// Reset ball position
+function resetBall() {
+  ball.x = CANVAS_WIDTH / 2;
+  ball.y = CANVAS_HEIGHT / 2;
+  ball.velocityX = -ball.velocityX; // Reverse direction
+  updateScores();
+}
+
+// Update scores
+function updateScores() {
+  player1ScoreDisplay.textContent = `Player 1: ${player1Score}`;
+  player2ScoreDisplay.textContent = `Player 2: ${player2Score}`;
 }
 
 // Game loop
 function gameLoop() {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    pacman.update();
-    pacman.draw();
+  updatePaddles();
+  player1Paddle.update();
+  player2Paddle.update();
+  ball.update();
+  checkCollisions();
 
-    for (let ghost of ghosts) {
-        ghost.update();
-        ghost.draw();
-    }
-    cherry.draw();
+  player1Paddle.draw();
+  player2Paddle.draw();
+  ball.draw();
 
-    checkCollisions();
-
-    requestAnimationFrame(gameLoop);
-}
-
-//Check collisions
-function checkCollisions(){
-    //Cherry collision
-    const distanceCherry = Math.sqrt((cherry.x - pacman.x) ** 2 + (cherry.y - pacman.y) ** 2);
-    if (distanceCherry < pacman.radius + cherry.radius) {
-        isPowerUpActive = true;
-        powerUpTimer = 500; // 500 frames (about 8 seconds at 60fps)
-        cherry.x = -100; // Move cherry off-screen
-        cherry.y = -100;
-    }
-
-    //Ghost collision
-    for (let i = ghosts.length - 1; i >= 0; i--) {
-        const ghost = ghosts[i];
-        const distanceGhost = Math.sqrt((ghost.x - pacman.x) ** 2 + (ghost.y - pacman.y) ** 2);
-
-        if (distanceGhost < pacman.radius + ghost.radius) {
-            if (isPowerUpActive) {
-                ghosts.splice(i, 1); // Remove the ghost
-                updateScore(100);
-            } else {
-                // Game Over (for now, just reset)
-                score = 0;
-                updateScore(0);
-                pacman.x = CANVAS_WIDTH / 2;
-                pacman.y = CANVAS_HEIGHT / 2;
-                ghosts = [];
-                ghosts.push(new Ghost(CANVAS_WIDTH / 4, CANVAS_HEIGHT / 4, 'red'));
-                cherry.x = CANVAS_WIDTH / 2;
-                cherry.y = CANVAS_HEIGHT / 4;
-            }
-        }
-    }
-
-    // Power-up timer
-    if (isPowerUpActive) {
-        powerUpTimer--;
-        if (powerUpTimer <= 0) {
-            isPowerUpActive = false;
-        }
-    }
+  requestAnimationFrame(gameLoop);
 }
 
 // Start the game
-initializeGame();
+gameLoop();
