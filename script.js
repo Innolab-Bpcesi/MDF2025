@@ -2,45 +2,60 @@ const gameCanvas = document.getElementById('gameCanvas');
 const message = document.getElementById('message');
 const resetButton = document.getElementById('resetButton');
 
-const gridSize = 5;
 let board = [];
-let emptyRow, emptyCol;
+let selectedCell = null;
+let possibleMoves = [];
+let currentPlayer = 'white';
 let gameActive = true;
 
+const pieces = {
+    'R': '&#9814;', // Black Rook
+    'N': '&#9816;', // Black Knight
+    'B': '&#9815;', // Black Bishop
+    'Q': '&#9813;', // Black Queen
+    'K': '&#9812;', // Black King
+    'P': '&#9817;', // Black Pawn
+    'r': '&#9820;', // White Rook
+    'n': '&#9822;', // White Knight
+    'b': '&#9821;', // White Bishop
+    'q': '&#9819;', // White Queen
+    'k': '&#9818;', // White King
+    'p': '&#9823;', // White Pawn
+};
+
 function createBoard() {
-    let count = 1;
-    for (let row = 0; row < gridSize; row++) {
+    const initialBoard = [
+        ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
+        ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+        [null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+        ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+    ];
+
+    for (let row = 0; row < 8; row++) {
         board[row] = [];
-        for (let col = 0; col < gridSize; col++) {
-            board[row][col] = count;
+        for (let col = 0; col < 8; col++) {
+            board[row][col] = initialBoard[row][col];
             const cell = document.createElement('div');
             cell.classList.add('cell');
+            cell.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
             cell.dataset.row = row;
             cell.dataset.col = col;
-            cell.textContent = count;
             cell.addEventListener('click', handleCellClick);
             gameCanvas.appendChild(cell);
-            count++;
         }
     }
-    board[gridSize - 1][gridSize - 1] = 0;
-    emptyRow = gridSize - 1;
-    emptyCol = gridSize - 1;
-    const emptyCell = gameCanvas.querySelector(`[data-row="${emptyRow}"][data-col="${emptyCol}"]`);
-    emptyCell.classList.add('empty');
-    emptyCell.textContent = '';
+    drawBoard();
 }
 
 function drawBoard() {
-    for (let row = 0; row < gridSize; row++) {
-        for (let col = 0; col < gridSize; col++) {
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
             const cell = gameCanvas.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            cell.textContent = board[row][col] === 0 ? '' : board[row][col];
-            if (board[row][col] === 0) {
-                cell.classList.add('empty');
-            } else {
-                cell.classList.remove('empty');
-            }
+            cell.innerHTML = board[row][col] ? pieces[board[row][col]] : '';
         }
     }
 }
@@ -52,65 +67,85 @@ function handleCellClick(event) {
     const row = parseInt(cell.dataset.row);
     const col = parseInt(cell.dataset.col);
 
-    if (isAdjacent(row, col)) {
-        swapCells(row, col);
-        drawBoard();
-        if (checkWin()) {
-            endGame();
+    if (selectedCell) {
+        const [selRow, selCol] = selectedCell;
+        if (possibleMoves.some(([r, c]) => r === row && c === col)) {
+            board[row][col] = board[selRow][selCol];
+            board[selRow][selCol] = null;
+            drawBoard();
+            switchPlayer();
+        }
+        clearSelection();
+    } else {
+        if (board[row][col] && isCurrentPlayerPiece(board[row][col])) {
+            selectCell(row, col);
         }
     }
 }
 
-function isAdjacent(row, col) {
-    return (
-        (Math.abs(row - emptyRow) === 1 && col === emptyCol) ||
-        (Math.abs(col - emptyCol) === 1 && row === emptyRow)
-    );
+function isCurrentPlayerPiece(piece) {
+    return (currentPlayer === 'white' && piece === piece.toLowerCase()) ||
+           (currentPlayer === 'black' && piece === piece.toUpperCase());
 }
 
-function swapCells(row, col) {
-    const temp = board[row][col];
-    board[row][col] = board[emptyRow][emptyCol];
-    board[emptyRow][emptyCol] = temp;
-    emptyRow = row;
-    emptyCol = col;
+function selectCell(row, col) {
+    selectedCell = [row, col];
+    possibleMoves = getPossibleMoves(row, col);
+    const cell = gameCanvas.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+    cell.classList.add('selected');
+    possibleMoves.forEach(([r, c]) => {
+        const possibleCell = gameCanvas.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+        possibleCell.classList.add('possible');
+    });
 }
 
-function checkWin() {
-    let count = 1;
-    for (let row = 0; row < gridSize; row++) {
-        for (let col = 0; col < gridSize; col++) {
-            if (row === gridSize - 1 && col === gridSize - 1) {
-                if (board[row][col] !== 0) return false;
-            } else {
-                if (board[row][col] !== count) return false;
-            }
-            count++;
-        }
+function clearSelection() {
+    if (selectedCell) {
+        const [row, col] = selectedCell;
+        const cell = gameCanvas.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        cell.classList.remove('selected');
+        possibleMoves.forEach(([r, c]) => {
+            const possibleCell = gameCanvas.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+            possibleCell.classList.remove('possible');
+        });
+        selectedCell = null;
+        possibleMoves = [];
     }
-    return true;
 }
 
-function endGame() {
-    gameActive = false;
-    message.textContent = 'You Win!';
-}
-
-function shuffleBoard() {
-    for (let i = 0; i < 1000; i++) {
-        const adjacentCells = [];
-        if (emptyRow > 0) adjacentCells.push([emptyRow - 1, emptyCol]);
-        if (emptyRow < gridSize - 1) adjacentCells.push([emptyRow + 1, emptyCol]);
-        if (emptyCol > 0) adjacentCells.push([emptyRow, emptyCol - 1]);
-        if (emptyCol < gridSize - 1) adjacentCells.push([emptyRow, emptyCol + 1]);
-
-        const randomCell = adjacentCells[Math.floor(Math.random() * adjacentCells.length)];
-        swapCells(randomCell[0], randomCell[1]);
+function getPossibleMoves(row, col) {
+    const piece = board[row][col];
+    const moves = [];
+    // Basic moves for now (only pawn)
+    if (piece === 'p') {
+        if (row > 0 && board[row - 1][col] === null) moves.push([row - 1, col]);
+        if (row === 6 && board[row - 2][col] === null && board[row - 1][col] === null) moves.push([row - 2, col]);
+        if (row > 0 && col > 0 && board[row - 1][col - 1] && board[row - 1][col - 1].toUpperCase() === board[row - 1][col - 1]) moves.push([row - 1, col - 1]);
+        if (row > 0 && col < 7 && board[row - 1][col + 1] && board[row - 1][col + 1].toUpperCase() === board[row - 1][col + 1]) moves.push([row - 1, col + 1]);
+    } else if (piece === 'P') {
+        if (row < 7 && board[row + 1][col] === null) moves.push([row + 1, col]);
+        if (row === 1 && board[row + 2][col] === null && board[row + 1][col] === null) moves.push([row + 2, col]);
+        if (row < 7 && col > 0 && board[row + 1][col - 1] && board[row + 1][col - 1].toLowerCase() === board[row + 1][col - 1]) moves.push([row + 1, col - 1]);
+        if (row < 7 && col < 7 && board[row + 1][col + 1] && board[row + 1][col + 1].toLowerCase() === board[row + 1][col + 1]) moves.push([row + 1, col + 1]);
     }
-    drawBoard();
+    return moves;
+}
+
+function switchPlayer() {
+    currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+    message.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn`;
+}
+
+function resetGame() {
+    board = [];
+    selectedCell = null;
+    possibleMoves = [];
+    currentPlayer = 'white';
     gameActive = true;
-    message.textContent = '';
+    message.textContent = "White's turn";
+    gameCanvas.innerHTML = '';
+    createBoard();
 }
 
 createBoard();
-resetButton.addEventListener('click', shuffleBoard);
+resetButton.addEventListener('click', resetGame);
