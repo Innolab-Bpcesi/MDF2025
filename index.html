@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Checkers Game by BPCESI </title>
+  <title>Monopoly</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Checkers</h1>
+  <h1>Monopoly</h1>
+
   <div id="game-container">
-    <canvas id="gameCanvas" width="480" height="480"></canvas>
+    <div id="board">
+      <!-- Board squares will be generated here -->
+    </div>
+
+    <div id="player-info">
+      <!-- Player information will be displayed here -->
+    </div>
+
+    <div id="dice-container">
+      <button id="roll-dice">Roll Dice</button>
+      <div id="dice-result"></div>
+    </div>
+    <div id="message-container">
+      <p id="message"></p>
+    </div>
   </div>
-  <div id="info">
-    <p id="turn">Red's Turn</p>
-    <p id="message"></p>
-  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
+
