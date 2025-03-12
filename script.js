@@ -2,34 +2,44 @@ const gameCanvas = document.getElementById('gameCanvas');
 const message = document.getElementById('message');
 const resetButton = document.getElementById('resetButton');
 
+const gridSize = 5;
 let board = [];
-let currentPlayer = 1; // 1 for red, 2 for yellow
+let emptyRow, emptyCol;
 let gameActive = true;
 
 function createBoard() {
-    for (let row = 0; row < 6; row++) {
+    let count = 1;
+    for (let row = 0; row < gridSize; row++) {
         board[row] = [];
-        for (let col = 0; col < 7; col++) {
-            board[row][col] = 0;
+        for (let col = 0; col < gridSize; col++) {
+            board[row][col] = count;
             const cell = document.createElement('div');
             cell.classList.add('cell');
             cell.dataset.row = row;
             cell.dataset.col = col;
+            cell.textContent = count;
             cell.addEventListener('click', handleCellClick);
             gameCanvas.appendChild(cell);
+            count++;
         }
     }
+    board[gridSize - 1][gridSize - 1] = 0;
+    emptyRow = gridSize - 1;
+    emptyCol = gridSize - 1;
+    const emptyCell = gameCanvas.querySelector(`[data-row="${emptyRow}"][data-col="${emptyCol}"]`);
+    emptyCell.classList.add('empty');
+    emptyCell.textContent = '';
 }
 
 function drawBoard() {
-    for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 7; col++) {
+    for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
             const cell = gameCanvas.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            cell.innerHTML = '';
-            if (board[row][col] !== 0) {
-                const disc = document.createElement('div');
-                disc.classList.add('disc', board[row][col] === 1 ? 'red' : 'yellow');
-                cell.appendChild(disc);
+            cell.textContent = board[row][col] === 0 ? '' : board[row][col];
+            if (board[row][col] === 0) {
+                cell.classList.add('empty');
+            } else {
+                cell.classList.remove('empty');
             }
         }
     }
@@ -39,124 +49,68 @@ function handleCellClick(event) {
     if (!gameActive) return;
 
     const cell = event.target;
+    const row = parseInt(cell.dataset.row);
     const col = parseInt(cell.dataset.col);
 
-    if (dropDisc(col)) {
+    if (isAdjacent(row, col)) {
+        swapCells(row, col);
         drawBoard();
-        if (checkWinner()) {
+        if (checkWin()) {
             endGame();
-        } else if (checkDraw()) {
-            drawGame();
-        } else {
-            switchPlayer();
         }
     }
 }
 
-function dropDisc(col) {
-    for (let row = 5; row >= 0; row--) {
-        if (board[row][col] === 0) {
-            board[row][col] = currentPlayer;
-            return true;
-        }
-    }
-    return false;
+function isAdjacent(row, col) {
+    return (
+        (Math.abs(row - emptyRow) === 1 && col === emptyCol) ||
+        (Math.abs(col - emptyCol) === 1 && row === emptyRow)
+    );
 }
 
-function checkWinner() {
-    // Check horizontal
-    for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 4; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row][col + 1] &&
-                board[row][col] === board[row][col + 2] &&
-                board[row][col] === board[row][col + 3]
-            ) {
-                return true;
-            }
-        }
-    }
-
-    // Check vertical
-    for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 7; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row + 1][col] &&
-                board[row][col] === board[row + 2][col] &&
-                board[row][col] === board[row + 3][col]
-            ) {
-                return true;
-            }
-        }
-    }
-
-    // Check diagonal (top-left to bottom-right)
-    for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 4; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row + 1][col + 1] &&
-                board[row][col] === board[row + 2][col + 2] &&
-                board[row][col] === board[row + 3][col + 3]
-            ) {
-                return true;
-            }
-        }
-    }
-
-    // Check diagonal (top-right to bottom-left)
-    for (let row = 0; row < 3; row++) {
-        for (let col = 3; col < 7; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row + 1][col - 1] &&
-                board[row][col] === board[row + 2][col - 2] &&
-                board[row][col] === board[row + 3][col - 3]
-            ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+function swapCells(row, col) {
+    const temp = board[row][col];
+    board[row][col] = board[emptyRow][emptyCol];
+    board[emptyRow][emptyCol] = temp;
+    emptyRow = row;
+    emptyCol = col;
 }
 
-function checkDraw() {
-    for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 7; col++) {
-            if (board[row][col] === 0) {
-                return false;
+function checkWin() {
+    let count = 1;
+    for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+            if (row === gridSize - 1 && col === gridSize - 1) {
+                if (board[row][col] !== 0) return false;
+            } else {
+                if (board[row][col] !== count) return false;
             }
+            count++;
         }
     }
     return true;
 }
 
-function switchPlayer() {
-    currentPlayer = currentPlayer === 1 ? 2 : 1;
-    message.textContent = `Player ${currentPlayer}'s turn (${currentPlayer === 1 ? 'Red' : 'Yellow'})`;
-}
-
 function endGame() {
     gameActive = false;
-    message.textContent = `Player ${currentPlayer} wins! (${currentPlayer === 1 ? 'Red' : 'Yellow'})`;
+    message.textContent = 'You Win!';
 }
 
-function drawGame(){
-    gameActive = false;
-    message.textContent = `It's a draw!`;
-}
+function shuffleBoard() {
+    for (let i = 0; i < 1000; i++) {
+        const adjacentCells = [];
+        if (emptyRow > 0) adjacentCells.push([emptyRow - 1, emptyCol]);
+        if (emptyRow < gridSize - 1) adjacentCells.push([emptyRow + 1, emptyCol]);
+        if (emptyCol > 0) adjacentCells.push([emptyRow, emptyCol - 1]);
+        if (emptyCol < gridSize - 1) adjacentCells.push([emptyRow, emptyCol + 1]);
 
-function resetGame() {
-    board = [];
-    currentPlayer = 1;
+        const randomCell = adjacentCells[Math.floor(Math.random() * adjacentCells.length)];
+        swapCells(randomCell[0], randomCell[1]);
+    }
+    drawBoard();
     gameActive = true;
-    message.textContent = "Player 1's turn (Red)";
-    gameCanvas.innerHTML = '';
-    createBoard();
+    message.textContent = '';
 }
 
 createBoard();
-resetButton.addEventListener('click', resetGame);
+resetButton.addEventListener('click', shuffleBoard);

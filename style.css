@@ -12,38 +12,31 @@ body {
 
 #gameCanvas {
   display: grid;
-  grid-template-columns: repeat(7, 60px);
-  grid-template-rows: repeat(6, 60px);
+  grid-template-columns: repeat(5, 80px);
+  grid-template-rows: repeat(5, 80px);
   gap: 5px;
-  background-color: #000080; /* Dark blue */
+  background-color: #555;
   padding: 10px;
   border-radius: 10px;
 }
 
 .cell {
-  width: 60px;
-  height: 60px;
-  background-color: #000080; /* Dark blue */
-  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  background-color: #eee;
   border: 2px solid #000;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 30px;
   cursor: pointer;
+  user-select: none;
 }
 
-.disc {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-}
-
-.red {
-  background-color: red;
-}
-
-.yellow {
-  background-color: yellow;
+.empty {
+  background-color: #555;
+  border: 2px solid #555;
+  cursor: default;
 }
 
 #message {
