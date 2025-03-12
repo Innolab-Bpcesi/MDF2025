@@ -1,17 +1,18 @@
 body {
-  font-family: sans-serif;
+  background-color: #70c5ce; /* Sky blue */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #333;
+  margin: 0;
+  font-family: sans-serif;
   color: white;
 }
 
 #gameCanvas {
-  background-color: #000;
-  border: 2px solid #fff;
+  background-color: #509050; /* Green ground */
+  border: 2px solid #000;
 }
 
 #score {

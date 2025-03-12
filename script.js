@@ -2,79 +2,139 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('score');
 
-const gridSize = 20;
-let snake = [{ x: 10, y: 10 }];
-let food = {};
-let direction = 'right';
+// Game variables
 let score = 0;
+let isJumping = false;
+let jumpHeight = 100;
+let gravity = 5;
+let jumpForce = 20;
+let playerY = canvas.height - 50; // Initial Y position on the ground
+let playerX = 50;
+let playerWidth = 30;
+let playerHeight = 50;
+let playerYVelocity = 0;
+let rocks = [];
+let rockSpeed = 5;
+let gameLoopInterval;
 let gameOver = false;
 
-function generateFood() {
-    food = {
-        x: Math.floor(Math.random() * (canvas.width / gridSize)),
-        y: Math.floor(Math.random() * (canvas.height / gridSize))
-    };
+// Player
+const player = {
+    x: playerX,
+    y: playerY,
+    width: playerWidth,
+    height: playerHeight,
+    color: 'blue',
+};
+
+// Rock
+class Rock {
+    constructor() {
+        this.x = canvas.width;
+        this.y = canvas.height - 30;
+        this.width = 30;
+        this.height = 30;
+        this.color = 'brown';
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+
+    update() {
+        this.x -= rockSpeed;
+    }
 }
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Functions
+function drawRect(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+}
 
-    ctx.fillStyle = 'red';
-    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+function drawPlayer() {
+    drawRect(player.x, player.y, player.width, player.height, player.color);
+}
 
-    for (let i = 0; i < snake.length; i++) {
-        ctx.fillStyle = i === 0 ? 'green' : 'lime';
-        ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
+function updatePlayer() {
+    if (isJumping) {
+        playerYVelocity -= jumpForce;
+        isJumping = false;
     }
+
+    playerYVelocity += gravity;
+    player.y += playerYVelocity;
+
+    // Keep player on the ground
+    if (player.y > canvas.height - player.height) {
+        player.y = canvas.height - player.height;
+        playerYVelocity = 0;
+    }
+}
+
+function generateRock() {
+    if (Math.random() < 0.02) { // Adjust probability of rock generation
+        rocks.push(new Rock());
+    }
+}
+
+function updateRocks() {
+    for (let i = rocks.length - 1; i >= 0; i--) {
+        rocks[i].update();
+        rocks[i].draw();
+
+        // Remove rocks that are off-screen
+        if (rocks[i].x + rocks[i].width < 0) {
+            rocks.splice(i, 1);
+        }
+    }
+}
+
+function checkCollision() {
+    for (let i = 0; i < rocks.length; i++) {
+        if (
+            player.x < rocks[i].x + rocks[i].width &&
+            player.x + player.width > rocks[i].x &&
+            player.y < rocks[i].y + rocks[i].height &&
+            player.y + player.height > rocks[i].y
+        ) {
+            gameOver = true;
+            clearInterval(gameLoopInterval);
+            alert(`Game Over! Score: ${score}`);
+        }
+    }
+}
+
+function updateScore() {
+    score++;
+    scoreDisplay.textContent = `Score: ${score}`;
 }
 
 function update() {
-    if (gameOver) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const head = { x: snake[0].x, y: snake[0].y };
-
-    switch (direction) {
-        case 'up': head.y--; break;
-        case 'down': head.y++; break;
-        case 'left': head.x--; break;
-        case 'right': head.x++; break;
-    }
-
-    if (head.x < 0 || head.x >= canvas.width / gridSize || head.y < 0 || head.y >= canvas.height / gridSize || checkSelfCollision(head)) {
-        gameOver = true;
-        alert(`Game Over! Score: ${score}`);
-        return;
-    }
-
-    if (head.x === food.x && head.y === food.y) {
-        score++;
-        scoreDisplay.textContent = `Score: ${score}`;
-        generateFood();
-    } else {
-        snake.pop();
-    }
-
-    snake.unshift(head);
-    draw();
+    updatePlayer();
+    drawPlayer();
+    generateRock();
+    updateRocks();
+    checkCollision();
+    updateScore();
 }
 
-function checkSelfCollision(head) {
-    for (let i = 1; i < snake.length; i++) {
-        if (head.x === snake[i].x && head.y === snake[i].y) {
-            return true;
-        }
-    }
-    return false;
-}
-
+// Event listeners
 document.addEventListener('keydown', (e) => {
-    switch (e.key) {
-        case 'ArrowUp': if (direction !== 'down') direction = 'up'; break;
-        case 'ArrowDown': if (direction !== 'up') direction = 'down'; break;
-        case 'ArrowLeft': if (direction !== 'right') direction = 'left'; break;
-        case 'ArrowRight': if (direction !== 'left') direction = 'right'; break;
+    if (e.key === ' ' && player.y === canvas.height - player.height) {
+        isJumping = true;
     }
 });
 
-generateFood();
-setInterval(update, 100);
+// Game loop
+function gameLoop() {
+    if (!gameOver) {
+        update();
+    }
+}
+
+// Start the game
+gameLoopInterval = setInterval(gameLoop, 1000 / 60); // 60 FPS
