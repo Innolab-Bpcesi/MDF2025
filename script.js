@@ -1,210 +1,201 @@
-const board = document.getElementById('board');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('score');
-const BOARD_SIZE = 8;
-const ANIMAL_TYPES = ['🦁', '🦒', '🐘', '🦓', '🐒', '🦧']; // Animal emojis
-let grid = [];
+
+const GRID_SIZE = 16;
+const CANVAS_WIDTH = canvas.width;
+const CANVAS_HEIGHT = canvas.height;
+
+// Game variables
 let score = 0;
-let selectedCell = null;
+let pacman;
+let ghosts = [];
+let cherry;
+let isPowerUpActive = false;
+let powerUpTimer = 0;
+
+// Pacman
+class Pacman {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.radius = GRID_SIZE / 2 - 2;
+        this.direction = 'right';
+        this.speed = 2;
+    }
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    update() {
+        if (this.direction === 'right') {
+            this.x += this.speed;
+        } else if (this.direction === 'left') {
+            this.x -= this.speed;
+        } else if (this.direction === 'up') {
+            this.y -= this.speed;
+        } else if (this.direction === 'down') {
+            this.y += this.speed;
+        }
+        // Keep Pacman within the canvas bounds
+        this.x = Math.max(this.radius, Math.min(this.x, CANVAS_WIDTH - this.radius));
+        this.y = Math.max(this.radius, Math.min(this.y, CANVAS_HEIGHT - this.radius));
+    }
+}
+
+// Ghost
+class Ghost {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.radius = GRID_SIZE / 2 - 2;
+        this.direction = 'left';
+        this.speed = 1;
+    }
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    update() {
+        if (this.direction === 'right') {
+            this.x += this.speed;
+            if (this.x > CANVAS_WIDTH - this.radius) this.direction = 'left';
+        } else if (this.direction === 'left') {
+            this.x -= this.speed;
+            if (this.x < this.radius) this.direction = 'right';
+        } else if (this.direction === 'up') {
+            this.y -= this.speed;
+            if (this.y < this.radius) this.direction = 'down';
+        } else if (this.direction === 'down') {
+            this.y += this.speed;
+            if (this.y > CANVAS_HEIGHT - this.radius) this.direction = 'up';
+        }
+        this.changeDirection();
+    }
+
+    changeDirection(){
+        const change = Math.random();
+        if(change < 0.05){
+            const newDirection = ['up', 'down', 'left', 'right'];
+            this.direction = newDirection[Math.floor(Math.random() * newDirection.length)];
+        }
+    }
+}
+
+// Cherry (Power-Up)
+class Cherry {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 6;
+    }
+    draw() {
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+}
 
 // Initialize the game
 function initializeGame() {
-  createBoard();
-  populateBoard();
-  updateScore();
+    pacman = new Pacman(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 'yellow');
+    ghosts.push(new Ghost(CANVAS_WIDTH / 4, CANVAS_HEIGHT / 4, 'red'));
+    cherry = new Cherry(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 4);
+
+    window.addEventListener('keydown', handleKeyDown);
+    gameLoop();
 }
 
-// Create the board
-function createBoard() {
-  board.innerHTML = '';
-  board.style.gridTemplateColumns = `repeat(${BOARD_SIZE}, 1fr)`;
-  grid = [];
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    grid[row] = [];
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const cell = document.createElement('div');
-      cell.classList.add('cell');
-      cell.dataset.row = row;
-      cell.dataset.col = col;
-      cell.addEventListener('click', handleCellClick);
-      board.appendChild(cell);
-      grid[row][col] = cell;
+// Handle key presses
+function handleKeyDown(event) {
+    switch (event.key) {
+        case 'ArrowUp':
+            pacman.direction = 'up';
+            break;
+        case 'ArrowDown':
+            pacman.direction = 'down';
+            break;
+        case 'ArrowLeft':
+            pacman.direction = 'left';
+            break;
+        case 'ArrowRight':
+            pacman.direction = 'right';
+            break;
     }
-  }
 }
 
-// Populate the board with random animals
-function populateBoard() {
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const animal = getRandomAnimal();
-      grid[row][col].textContent = animal;
+// Update the score
+function updateScore(amount) {
+    score += amount;
+    scoreDisplay.textContent = `Score: ${score}`;
+}
+
+// Game loop
+function gameLoop() {
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    pacman.update();
+    pacman.draw();
+
+    for (let ghost of ghosts) {
+        ghost.update();
+        ghost.draw();
     }
-  }
+    cherry.draw();
+
+    checkCollisions();
+
+    requestAnimationFrame(gameLoop);
 }
 
-// Get a random animal
-function getRandomAnimal() {
-  return ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
-}
-
-// Handle cell clicks
-function handleCellClick(event) {
-  const cell = event.target;
-  const row = parseInt(cell.dataset.row);
-  const col = parseInt(cell.dataset.col);
-
-  if (selectedCell) {
-    const [selRow, selCol] = selectedCell;
-    if (isAdjacent(row, col, selRow, selCol)) {
-      swapAnimals(row, col, selRow, selCol);
-      if (!findMatches()){
-        swapAnimals(row, col, selRow, selCol);
-      } else {
-        removeMatches();
-        updateBoard();
-        
-      }
+//Check collisions
+function checkCollisions(){
+    //Cherry collision
+    const distanceCherry = Math.sqrt((cherry.x - pacman.x) ** 2 + (cherry.y - pacman.y) ** 2);
+    if (distanceCherry < pacman.radius + cherry.radius) {
+        isPowerUpActive = true;
+        powerUpTimer = 500; // 500 frames (about 8 seconds at 60fps)
+        cherry.x = -100; // Move cherry off-screen
+        cherry.y = -100;
     }
-    selectedCell = null;
-  } else {
-    selectedCell = [row, col];
-  }
-}
 
-// Check if two cells are adjacent
-function isAdjacent(row1, col1, row2, col2) {
-  return (Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1);
-}
+    //Ghost collision
+    for (let i = ghosts.length - 1; i >= 0; i--) {
+        const ghost = ghosts[i];
+        const distanceGhost = Math.sqrt((ghost.x - pacman.x) ** 2 + (ghost.y - pacman.y) ** 2);
 
-// Swap animals between two cells
-function swapAnimals(row1, col1, row2, col2) {
-  const temp = grid[row1][col1].textContent;
-  grid[row1][col1].textContent = grid[row2][col2].textContent;
-  grid[row2][col2].textContent = temp;
-}
-
-// Check for matches
-function findMatches() {
-    let matches = false;
-
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
-            if (checkMatch(row, col)) {
-                matches = true;
+        if (distanceGhost < pacman.radius + ghost.radius) {
+            if (isPowerUpActive) {
+                ghosts.splice(i, 1); // Remove the ghost
+                updateScore(100);
+            } else {
+                // Game Over (for now, just reset)
+                score = 0;
+                updateScore(0);
+                pacman.x = CANVAS_WIDTH / 2;
+                pacman.y = CANVAS_HEIGHT / 2;
+                ghosts = [];
+                ghosts.push(new Ghost(CANVAS_WIDTH / 4, CANVAS_HEIGHT / 4, 'red'));
+                cherry.x = CANVAS_WIDTH / 2;
+                cherry.y = CANVAS_HEIGHT / 4;
             }
         }
     }
 
-    return matches;
-}
-
-// Check for a match starting from a given cell
-function checkMatch(row, col) {
-    const animal = grid[row][col].textContent;
-
-    // Check horizontal match
-    let horizontalMatch = 1;
-    for (let c = col + 1; c < BOARD_SIZE; c++) {
-        if (grid[row][c].textContent === animal) {
-            horizontalMatch++;
-        } else {
-            break;
+    // Power-up timer
+    if (isPowerUpActive) {
+        powerUpTimer--;
+        if (powerUpTimer <= 0) {
+            isPowerUpActive = false;
         }
     }
-    if (horizontalMatch >= 3) {
-        return true;
-    }
-
-    // Check vertical match
-    let verticalMatch = 1;
-    for (let r = row + 1; r < BOARD_SIZE; r++) {
-        if (grid[r][col].textContent === animal) {
-            verticalMatch++;
-        } else {
-            break;
-        }
-    }
-    if (verticalMatch >= 3) {
-        return true;
-    }
-    return false;
-}
-
-// Remove matches
-function removeMatches() {
-  const matchedCells = new Set();
-
-  // Find horizontal matches
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE - 2; col++) {
-      const animal = grid[row][col].textContent;
-      if (grid[row][col + 1].textContent === animal && grid[row][col + 2].textContent === animal) {
-        for (let c = col; c < BOARD_SIZE; c++){
-          if(grid[row][c].textContent === animal){
-            matchedCells.add(grid[row][c]);
-          } else{
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  // Find vertical matches
-  for (let col = 0; col < BOARD_SIZE; col++) {
-    for (let row = 0; row < BOARD_SIZE - 2; row++) {
-      const animal = grid[row][col].textContent;
-      if (grid[row + 1][col].textContent === animal && grid[row + 2][col].textContent === animal) {
-        for(let r = row; r < BOARD_SIZE; r++){
-          if(grid[r][col].textContent === animal){
-            matchedCells.add(grid[r][col]);
-          } else {
-            break;
-          }
-        }
-      }
-    }
-  }
-  matchedCells.forEach((cell) => {
-    cell.textContent = '';
-    score += 10;
-  });
-  updateScore();
-}
-
-// Update the board after removing matches
-function updateBoard() {
-    // Drop down animals
-    for (let col = 0; col < BOARD_SIZE; col++) {
-        let emptyRow = BOARD_SIZE - 1;
-        for (let row = BOARD_SIZE - 1; row >= 0; row--) {
-            if (grid[row][col].textContent !== '') {
-                grid[emptyRow][col].textContent = grid[row][col].textContent;
-                if (row !== emptyRow) {
-                    grid[row][col].textContent = '';
-                }
-                emptyRow--;
-            }
-        }
-    }
-
-    // Fill empty spaces with new animals
-    for (let col = 0; col < BOARD_SIZE; col++) {
-        for (let row = 0; row < BOARD_SIZE; row++) {
-            if (grid[row][col].textContent === '') {
-                grid[row][col].textContent = getRandomAnimal();
-            }
-        }
-    }
-    if(findMatches()){
-        removeMatches();
-        updateBoard();
-    }
-}
-
-// Update the score display
-function updateScore() {
-  scoreDisplay.textContent = `Score: ${score}`;
 }
 
 // Start the game

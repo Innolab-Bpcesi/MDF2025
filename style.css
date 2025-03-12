@@ -1,45 +1,69 @@
 body {
+  font-family: 'Press Start 2P', sans-serif; /* Retro font */
+  background-color: #000; /* Black background */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+  color: white;
+  text-align: center; /* Center text globally */
+}
+
+h1 {
+    font-size: 3em; /* Larger heading */
+    margin-bottom: 0.5em; /* Space below title */
+}
+
+#game-container {
+    border: 4px solid #333; /* Darker border */
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* Soft glow */
+    margin-top: 20px;
+}
+
+#gameCanvas {
+  background-color: #000;
+}
+
+.game-info {
+  margin-bottom: 10px;
+  font-size: 1.2em;
+}
+#score{
+    text-align: center;
+    width: 100%;
+}
+
+/* Instructions */
+#instructions {
+    margin-top: 20px;
+    font-size: 0.8em;
+    max-width: 400px;
+    color: #ccc; /* Lighter color for instructions */
+}
+
+#instructions p {
+    margin: 5px 0; /* Space between instruction lines */
+}
+body {
     font-family: sans-serif;
-    background-color: #f0f0f0;
+    background-color: #000; /* Black background */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
     margin: 0;
+    color: white;
   }
   
   #game-container {
-    display: flex;
-    justify-content: center;
+    border: 2px solid white;
     margin-top: 20px;
   }
   
-  #board {
-    display: grid;
-    background-color: #ccc;
-    border: 2px solid #888;
-    gap: 5px; /* Add some spacing between cells */
-  }
-  
-  .cell {
-    width: 50px;
-    height: 50px;
-    background-color: #eee;
-    border: 1px solid #888;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    font-size: 30px;
-    user-select: none;
-  }
-  
-  .animal {
-    width: 40px;
-    height: 40px;
-  }
-  .game-info{
-    margin-bottom: 10px;
+  #gameCanvas {
+    background-color: #000;
   }
   
