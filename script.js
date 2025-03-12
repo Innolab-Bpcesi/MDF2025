@@ -1,162 +1,135 @@
-const gameboard = document.getElementById('gameboard');
-const message = document.getElementById('message');
-const resetButton = document.getElementById('resetButton');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('score');
 
-let board = [];
-let currentPlayer = 1; // 1 for red, 2 for yellow
-let gameActive = true;
+const gridSize = 20;
+let snake = [{ x: 10, y: 10 }];
+let food = {};
+let direction = 'right';
+let score = 0;
+let gameOver = false;
+let gameLoop;
+let gameStarted = false;
+let gameSpeed = 150;
 
-function createBoard() {
-    for (let row = 0; row < 6; row++) {
-        board[row] = [];
-        for (let col = 0; col < 7; col++) {
-            board[row][col] = 0;
-            const cell = document.createElement('div');
-            cell.classList.add('cell');
-            cell.dataset.row = row;
-            cell.dataset.col = col;
-            cell.addEventListener('click', handleCellClick);
-            gameboard.appendChild(cell);
-        }
+function generateFood() {
+    food = {
+        x: Math.floor(Math.random() * (canvas.width / gridSize)),
+        y: Math.floor(Math.random() * (canvas.height / gridSize))
+    };
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!gameStarted) {
+        ctx.fillStyle = 'white';
+        ctx.font = '20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Press Space to Start', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    ctx.fillStyle = 'red';
+    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+
+    for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? 'green' : 'lime';
+        ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
+        ctx.strokeStyle = 'darkgreen';
+        ctx.strokeRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
     }
 }
 
-function drawBoard() {
-    for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 7; col++) {
-            const cell = gameboard.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            cell.innerHTML = '';
-            if (board[row][col] !== 0) {
-                const disc = document.createElement('div');
-                disc.classList.add('disc', board[row][col] === 1 ? 'red' : 'yellow');
-                cell.appendChild(disc);
-            }
+function update() {
+    if (!gameStarted) return;
+
+    if (gameOver) {
+        clearInterval(gameLoop);
+        if (confirm(`Game Over! Score: ${score}\nRetry?`)) {
+            resetGame();
         }
+        return;
     }
-}
 
-function handleCellClick(event) {
-    if (!gameActive) return;
+    const head = { x: snake[0].x, y: snake[0].y };
 
-    const cell = event.target;
-    const col = parseInt(cell.dataset.col);
-
-    if (dropDisc(col)) {
-        drawBoard();
-        if (checkWinner()) {
-            endGame();
-        } else if (checkDraw()) {
-            drawGame();
-        } else {
-            switchPlayer();
-        }
+    switch (direction) {
+        case 'up':
+            head.y--;
+            break;
+        case 'down':
+            head.y++;
+            break;
+        case 'left':
+            head.x--;
+            break;
+        case 'right':
+            head.x++;
+            break;
     }
-}
 
-function dropDisc(col) {
-    for (let row = 5; row >= 0; row--) {
-        if (board[row][col] === 0) {
-            board[row][col] = currentPlayer;
-            return true;
-        }
+    if (head.x < 0 || head.x >= canvas.width / gridSize || head.y < 0 || head.y >= canvas.height / gridSize) {
+        gameOver = true;
     }
-    return false;
-}
 
-function checkWinner() {
-    // Check horizontal
-    for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 4; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row][col + 1] &&
-                board[row][col] === board[row][col + 2] &&
-                board[row][col] === board[row][col + 3]
-            ) {
-                return true;
-            }
+    for (let i = 1; i < snake.length; i++) {
+        if (head.x === snake[i].x && head.y === snake[i].y) {
+            gameOver = true;
         }
     }
 
-    // Check vertical
-    for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 7; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row + 1][col] &&
-                board[row][col] === board[row + 2][col] &&
-                board[row][col] === board[row + 3][col]
-            ) {
-                return true;
-            }
-        }
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        scoreDisplay.textContent = `Score: ${score}`;
+        generateFood();
+    } else {
+        snake.pop();
     }
 
-    // Check diagonal (top-left to bottom-right)
-    for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 4; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row + 1][col + 1] &&
-                board[row][col] === board[row + 2][col + 2] &&
-                board[row][col] === board[row + 3][col + 3]
-            ) {
-                return true;
-            }
-        }
-    }
+    snake.unshift(head);
 
-    // Check diagonal (top-right to bottom-left)
-    for (let row = 0; row < 3; row++) {
-        for (let col = 3; col < 7; col++) {
-            if (
-                board[row][col] !== 0 &&
-                board[row][col] === board[row + 1][col - 1] &&
-                board[row][col] === board[row + 2][col - 2] &&
-                board[row][col] === board[row + 3][col - 3]
-            ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function checkDraw() {
-    for (let row = 0; row < 6; row++) {
-        for (let col = 0; col < 7; col++) {
-            if (board[row][col] === 0) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-function switchPlayer() {
-    currentPlayer = currentPlayer === 1 ? 2 : 1;
-    message.textContent = `Player ${currentPlayer}'s turn (${currentPlayer === 1 ? 'Red' : 'Yellow'})`;
-}
-
-function endGame() {
-    gameActive = false;
-    message.textContent = `Player ${currentPlayer} wins! (${currentPlayer === 1 ? 'Red' : 'Yellow'})`;
-}
-
-function drawGame(){
-    gameActive = false;
-    message.textContent = `It's a draw!`;
+    draw();
 }
 
 function resetGame() {
-    board = [];
-    currentPlayer = 1;
-    gameActive = true;
-    message.textContent = "Player 1's turn (Red)";
-    gameboard.innerHTML = '';
-    createBoard();
+    snake = [{ x: 10, y: 10 }];
+    food = {};
+    direction = 'right';
+    score = 0;
+    gameOver = false;
+    generateFood();
+    scoreDisplay.textContent = `Score: ${score}`;
+    gameLoop = setInterval(update, gameSpeed);
 }
 
-createBoard();
-resetButton.addEventListener('click', resetGame);
+function startGame() {
+    gameStarted = true;
+    generateFood();
+    gameLoop = setInterval(update, gameSpeed);
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === ' ') {
+        if (!gameStarted) {
+            startGame();
+        }
+    } else {
+        switch (e.key) {
+            case 'ArrowUp':
+                if (direction !== 'down' && gameStarted) direction = 'up';
+                break;
+            case 'ArrowDown':
+                if (direction !== 'up' && gameStarted) direction = 'down';
+                break;
+            case 'ArrowLeft':
+                if (direction !== 'right' && gameStarted) direction = 'left';
+                break;
+            case 'ArrowRight':
+                if (direction !== 'left' && gameStarted) direction = 'right';
+                break;
+        }
+    }
+});
+
+draw();
