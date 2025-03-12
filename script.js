@@ -1,77 +1,162 @@
-const cells = document.querySelectorAll('.cell');
-const message = document.getElementById('message');
-const resetButton = document.getElementById('reset-button');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('score');
 
-let currentPlayer = 'X';
-let board = ['', '', '', '', '', '', '', '', ''];
-let gameActive = true;
+const GRID_SIZE = 20;
+const CANVAS_WIDTH = canvas.width;
+const CANVAS_HEIGHT = canvas.height;
 
-// Winning combinations
-const winningCombinations = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-  [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-  [0, 4, 8], [2, 4, 6]             // Diagonals
-];
+// Game variables
+let snake = [{ x: 10, y: 10 }];
+let food = {};
+let direction = 'right';
+let score = 0;
+let gameOver = false;
+let gameSpeed = 100; // Initial game speed (milliseconds per frame)
 
-// Handle cell click
-function handleCellClick(clickedCellEvent) {
-  const clickedCell = clickedCellEvent.target;
-  const clickedCellIndex = parseInt(clickedCell.dataset.index);
-
-  if (board[clickedCellIndex] !== '' || !gameActive) {
-    return;
+// Generate food
+function generateFood() {
+  food = {
+    x: Math.floor(Math.random() * (CANVAS_WIDTH / GRID_SIZE)),
+    y: Math.floor(Math.random() * (CANVAS_HEIGHT / GRID_SIZE)),
+  };
+  // Check if food spawns inside the snake
+  for (let i = 0; i < snake.length; i++) {
+    if (food.x === snake[i].x && food.y === snake[i].y) {
+      generateFood();
+      return;
+    }
   }
-
-  board[clickedCellIndex] = currentPlayer;
-  clickedCell.textContent = currentPlayer;
-
-  if (checkWin()) {
-    message.textContent = `Player ${currentPlayer} wins!`;
-    gameActive = false;
-    return;
-  }
-
-  if (checkDraw()) {
-    message.textContent = "It's a draw!";
-    gameActive = false;
-    return;
-  }
-
-  switchPlayer();
 }
 
-// Switch player
-function switchPlayer() {
-  currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-  message.textContent = `Player ${currentPlayer}'s turn`;
+// Draw a block
+function drawBlock(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+  ctx.strokeStyle = 'black';
+  ctx.strokeRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
 }
 
-// Check for win
-function checkWin() {
-  for (const combination of winningCombinations) {
-    const [a, b, c] = combination;
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+// Draw the snake
+function drawSnake() {
+  for (let i = 0; i < snake.length; i++) {
+    drawBlock(snake[i].x, snake[i].y, i === 0 ? 'green' : 'lime');
+  }
+}
+
+// Draw the food
+function drawFood() {
+  drawBlock(food.x, food.y, 'red');
+}
+
+// Move the snake
+function moveSnake() {
+  const head = { x: snake[0].x, y: snake[0].y };
+
+  switch (direction) {
+    case 'up':
+      head.y--;
+      break;
+    case 'down':
+      head.y++;
+      break;
+    case 'left':
+      head.x--;
+      break;
+    case 'right':
+      head.x++;
+      break;
+  }
+
+  // Check for collisions
+  if (checkCollision(head)) {
+    gameOver = true;
+    return;
+  }
+
+  snake.unshift(head);
+
+  // Check if snake ate food
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    updateScore();
+    generateFood();
+    increaseGameSpeed();
+  } else {
+    snake.pop();
+  }
+}
+
+// Check for collisions
+function checkCollision(head) {
+  // Wall collision
+  if (head.x < 0 || head.x >= CANVAS_WIDTH / GRID_SIZE || head.y < 0 || head.y >= CANVAS_HEIGHT / GRID_SIZE) {
+    return true;
+  }
+
+  // Self collision
+  for (let i = 1; i < snake.length; i++) {
+    if (head.x === snake[i].x && head.y === snake[i].y) {
       return true;
     }
   }
+
   return false;
 }
 
-// Check for draw
-function checkDraw() {
-  return board.every(cell => cell !== '');
+// Update the score
+function updateScore() {
+  scoreDisplay.textContent = `Score: ${score}`;
 }
 
-// Reset the game
-function resetGame() {
-  currentPlayer = 'X';
-  board = ['', '', '', '', '', '', '', '', ''];
-  gameActive = true;
-  message.textContent = `Player X's turn`;
-  cells.forEach(cell => cell.textContent = '');
+// Increase game speed
+function increaseGameSpeed() {
+  if (gameSpeed > 20) {
+    gameSpeed -= 5; // Increase speed by decreasing the delay
+  }
 }
 
-// Add event listeners
-cells.forEach(cell => cell.addEventListener('click', handleCellClick));
-resetButton.addEventListener('click', resetGame);
+// Handle key presses
+window.addEventListener('keydown', (event) => {
+  switch (event.key) {
+    case 'ArrowUp':
+      if (direction !== 'down') direction = 'up';
+      break;
+    case 'ArrowDown':
+      if (direction !== 'up') direction = 'down';
+      break;
+    case 'ArrowLeft':
+      if (direction !== 'right') direction = 'left';
+      break;
+    case 'ArrowRight':
+      if (direction !== 'left') direction = 'right';
+      break;
+  }
+});
 
+// Game over
+function gameOverFunc() {
+  alert('Game Over! Score: ' + score);
+  // Reset the game (for now, just reload the page)
+  location.reload();
+}
+
+// Game loop
+function gameLoop() {
+  if (gameOver) {
+    gameOverFunc();
+    return;
+  }
+
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  moveSnake();
+  drawSnake();
+  drawFood();
+
+  setTimeout(gameLoop, gameSpeed);
+}
+
+// Start the game
+generateFood();
+gameLoop();
