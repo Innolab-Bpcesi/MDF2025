@@ -1,26 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tic-Tac-Toe</title>
+  <title>Snake Game</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Tic-Tac-Toe</h1>
-  <div id="player-setup">
-    <label for="player1-name">Player 1 (X):</label>
-    <input type="text" id="player1-name" value="Player 1">
-    <label for="player2-name">Player 2 (O):</label>
-    <input type="text" id="player2-name" value="Player 2">
-    <button id="start-button">Start Game</button>
+  <h1>Snake Game</h1>
+  <div class="game-info">
+    <div id="score">Score: 0</div>
   </div>
-  <div id="game-info" style="display: none;">
-    <div id="player1-score">Player 1 (X): 0</div>
-    <div id="player2-score">Player 2 (O): 0</div>
-  </div>
-  <div id="message"></div>
   <div id="game-container">
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
   </div>
-  <button id="reset-button" style="display: none;">Reset</button>
   <script src="script.js"></script>
 </body>
 </html>
