@@ -12,6 +12,7 @@ let food = {};
 let direction = 'right';
 let score = 0;
 let gameOver = false;
+let gameSpeed = 100; // Initial game speed (milliseconds per frame)
 
 // Generate food
 function generateFood() {
@@ -19,6 +20,13 @@ function generateFood() {
     x: Math.floor(Math.random() * (CANVAS_WIDTH / GRID_SIZE)),
     y: Math.floor(Math.random() * (CANVAS_HEIGHT / GRID_SIZE)),
   };
+  // Check if food spawns inside the snake
+  for (let i = 0; i < snake.length; i++) {
+    if (food.x === snake[i].x && food.y === snake[i].y) {
+      generateFood();
+      return;
+    }
+  }
 }
 
 // Draw a block
@@ -73,6 +81,7 @@ function moveSnake() {
     score++;
     updateScore();
     generateFood();
+    increaseGameSpeed();
   } else {
     snake.pop();
   }
@@ -100,6 +109,13 @@ function updateScore() {
   scoreDisplay.textContent = `Score: ${score}`;
 }
 
+// Increase game speed
+function increaseGameSpeed() {
+  if (gameSpeed > 20) {
+    gameSpeed -= 5; // Increase speed by decreasing the delay
+  }
+}
+
 // Handle key presses
 window.addEventListener('keydown', (event) => {
   switch (event.key) {
@@ -120,7 +136,7 @@ window.addEventListener('keydown', (event) => {
 
 // Game over
 function gameOverFunc() {
-  alert('Game Over!');
+  alert('Game Over! Score: ' + score);
   // Reset the game (for now, just reload the page)
   location.reload();
 }
@@ -138,7 +154,7 @@ function gameLoop() {
   drawSnake();
   drawFood();
 
-  setTimeout(gameLoop, 100); // Adjust speed here
+  setTimeout(gameLoop, gameSpeed);
 }
 
 // Start the game
