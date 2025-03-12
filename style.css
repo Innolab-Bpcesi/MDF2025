@@ -19,43 +19,27 @@ body {
     display: grid;
     background-color: #ccc;
     border: 2px solid #888;
+    gap: 5px; /* Add some spacing between cells */
   }
   
   .cell {
-    width: 30px;
-    height: 30px;
-    border: 2px outset #eee;
-    background-color: #ddd;
-    text-align: center;
-    line-height: 30px;
+    width: 50px;
+    height: 50px;
+    background-color: #eee;
+    border: 1px solid #888;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 30px;
     user-select: none;
   }
   
-  .cell.revealed {
-    border: 1px solid #888;
-    background-color: #eee;
+  .animal {
+    width: 40px;
+    height: 40px;
   }
-  
-  .cell.mine {
-    background-color: red;
-    color: black;
-  }
-  
-  .cell.flagged {
-    background-color: orange;
-  }
-  
-  .controls {
-    display: flex;
-    gap: 20px;
+  .game-info{
     margin-bottom: 10px;
-  }
-  
-  #message {
-    margin-top: 20px;
-    font-size: 20px;
-    font-weight: bold;
   }
   

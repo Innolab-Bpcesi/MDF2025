@@ -1,201 +1,210 @@
 const board = document.getElementById('board');
-const minesLeftDisplay = document.getElementById('mines-left');
-const timerDisplay = document.getElementById('timer');
-const messageDisplay = document.getElementById('message');
-
-const BOARD_SIZE = 10;
-const NUM_MINES = 10;
-
-let cells = [];
-let mines = [];
-let revealedCells = 0;
-let flagsPlaced = 0;
-let gameStarted = false;
-let gameOver = false;
-let timer = 0;
-let timerInterval;
+const scoreDisplay = document.getElementById('score');
+const BOARD_SIZE = 8;
+const ANIMAL_TYPES = ['🦁', '🦒', '🐘', '🦓', '🐒', '🦧']; // Animal emojis
+let grid = [];
+let score = 0;
+let selectedCell = null;
 
 // Initialize the game
 function initializeGame() {
   createBoard();
-  placeMines();
-  updateMinesLeft();
-  setupTimer();
-  gameStarted = true;
-  gameOver = false;
-  revealedCells = 0;
-  flagsPlaced = 0;
-  messageDisplay.textContent = '';
+  populateBoard();
+  updateScore();
 }
 
 // Create the board
 function createBoard() {
   board.innerHTML = '';
   board.style.gridTemplateColumns = `repeat(${BOARD_SIZE}, 1fr)`;
-
-  cells = [];
-  for (let i = 0; i < BOARD_SIZE; i++) {
-    cells[i] = [];
-    for (let j = 0; j < BOARD_SIZE; j++) {
+  grid = [];
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    grid[row] = [];
+    for (let col = 0; col < BOARD_SIZE; col++) {
       const cell = document.createElement('div');
       cell.classList.add('cell');
-      cell.dataset.row = i;
-      cell.dataset.col = j;
+      cell.dataset.row = row;
+      cell.dataset.col = col;
       cell.addEventListener('click', handleCellClick);
-      cell.addEventListener('contextmenu', handleRightClick);
       board.appendChild(cell);
-      cells[i][j] = cell;
+      grid[row][col] = cell;
     }
   }
 }
 
-// Place mines randomly
-function placeMines() {
-  mines = [];
-  while (mines.length < NUM_MINES) {
-    const row = Math.floor(Math.random() * BOARD_SIZE);
-    const col = Math.floor(Math.random() * BOARD_SIZE);
-    const isAlreadyMine = mines.some(mine => mine.row === row && mine.col === col);
-    if (!isAlreadyMine) {
-      mines.push({ row, col });
+// Populate the board with random animals
+function populateBoard() {
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      const animal = getRandomAnimal();
+      grid[row][col].textContent = animal;
     }
   }
+}
+
+// Get a random animal
+function getRandomAnimal() {
+  return ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
 }
 
 // Handle cell clicks
 function handleCellClick(event) {
-  if (gameOver) return;
   const cell = event.target;
   const row = parseInt(cell.dataset.row);
   const col = parseInt(cell.dataset.col);
 
-  if(cell.classList.contains('flagged')) return;
-
-  revealCell(row, col);
-}
-
-// Reveal a cell
-function revealCell(row, col) {
-  if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return;
-
-  const cell = cells[row][col];
-  if (cell.classList.contains('revealed')) return;
-
-  cell.classList.add('revealed');
-  revealedCells++;
-
-  const isMine = mines.some(mine => mine.row === row && mine.col === col);
-  if (isMine) {
-    cell.classList.add('mine');
-    cell.textContent = '💣';
-    gameOver = true;
-    endGame(false);
+  if (selectedCell) {
+    const [selRow, selCol] = selectedCell;
+    if (isAdjacent(row, col, selRow, selCol)) {
+      swapAnimals(row, col, selRow, selCol);
+      if (!findMatches()){
+        swapAnimals(row, col, selRow, selCol);
+      } else {
+        removeMatches();
+        updateBoard();
+        
+      }
+    }
+    selectedCell = null;
   } else {
-    const adjacentMines = countAdjacentMines(row, col);
-    if (adjacentMines > 0) {
-      cell.textContent = adjacentMines;
-    } else {
-      for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-          revealCell(row + i, col + j);
-        }
-      }
-    }
-    checkWin();
+    selectedCell = [row, col];
   }
 }
 
-// Count adjacent mines
-function countAdjacentMines(row, col) {
-  let count = 0;
-  for (let i = -1; i <= 1; i++) {
-    for (let j = -1; j <= 1; j++) {
-      if (i === 0 && j === 0) continue;
-      const newRow = row + i;
-      const newCol = col + j;
-      if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE) {
-        const isMine = mines.some(mine => mine.row === newRow && mine.col === newCol);
-        if (isMine) {
-          count++;
-        }
-      }
-    }
-  }
-  return count;
+// Check if two cells are adjacent
+function isAdjacent(row1, col1, row2, col2) {
+  return (Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1);
 }
 
-// Handle right click (flagging)
-function handleRightClick(event) {
-  event.preventDefault();
-  if (gameOver) return;
-  const cell = event.target;
-  const row = parseInt(cell.dataset.row);
-  const col = parseInt(cell.dataset.col);
-
-  if (!cell.classList.contains('revealed')) {
-    if (cell.classList.contains('flagged')) {
-      cell.classList.remove('flagged');
-      cell.textContent = '';
-      flagsPlaced--;
-    } else if (flagsPlaced < NUM_MINES){
-      cell.classList.add('flagged');
-      cell.textContent = '🚩';
-      flagsPlaced++;
-    }
-    updateMinesLeft();
-  }
+// Swap animals between two cells
+function swapAnimals(row1, col1, row2, col2) {
+  const temp = grid[row1][col1].textContent;
+  grid[row1][col1].textContent = grid[row2][col2].textContent;
+  grid[row2][col2].textContent = temp;
 }
 
-//Update mines left counter
-function updateMinesLeft(){
-    minesLeftDisplay.textContent = `Mines: ${NUM_MINES - flagsPlaced}`;
-}
+// Check for matches
+function findMatches() {
+    let matches = false;
 
-// Check for win
-function checkWin() {
-    if (revealedCells === BOARD_SIZE * BOARD_SIZE - NUM_MINES) {
-        endGame(true);
-    }
-}
-
-// End the game
-function endGame(win) {
-    gameOver = true;
-    clearInterval(timerInterval);
-
-    if (win) {
-        messageDisplay.textContent = "You Win!";
-    } else {
-        messageDisplay.textContent = "You Lose!";
-        //Show all mines
-        for(let mine of mines){
-            const cell = cells[mine.row][mine.col];
-            if(!cell.classList.contains('revealed')){
-                cell.classList.add('mine');
-                cell.textContent = '💣';
+    for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+            if (checkMatch(row, col)) {
+                matches = true;
             }
         }
     }
 
-    //Remove event listeners
-    for(let i = 0; i < BOARD_SIZE; i++){
-        for(let j = 0; j < BOARD_SIZE; j++){
-            const cell = cells[i][j];
-            cell.removeEventListener('click', handleCellClick);
-            cell.removeEventListener('contextmenu', handleRightClick);
+    return matches;
+}
+
+// Check for a match starting from a given cell
+function checkMatch(row, col) {
+    const animal = grid[row][col].textContent;
+
+    // Check horizontal match
+    let horizontalMatch = 1;
+    for (let c = col + 1; c < BOARD_SIZE; c++) {
+        if (grid[row][c].textContent === animal) {
+            horizontalMatch++;
+        } else {
+            break;
         }
+    }
+    if (horizontalMatch >= 3) {
+        return true;
+    }
+
+    // Check vertical match
+    let verticalMatch = 1;
+    for (let r = row + 1; r < BOARD_SIZE; r++) {
+        if (grid[r][col].textContent === animal) {
+            verticalMatch++;
+        } else {
+            break;
+        }
+    }
+    if (verticalMatch >= 3) {
+        return true;
+    }
+    return false;
+}
+
+// Remove matches
+function removeMatches() {
+  const matchedCells = new Set();
+
+  // Find horizontal matches
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE - 2; col++) {
+      const animal = grid[row][col].textContent;
+      if (grid[row][col + 1].textContent === animal && grid[row][col + 2].textContent === animal) {
+        for (let c = col; c < BOARD_SIZE; c++){
+          if(grid[row][c].textContent === animal){
+            matchedCells.add(grid[row][c]);
+          } else{
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Find vertical matches
+  for (let col = 0; col < BOARD_SIZE; col++) {
+    for (let row = 0; row < BOARD_SIZE - 2; row++) {
+      const animal = grid[row][col].textContent;
+      if (grid[row + 1][col].textContent === animal && grid[row + 2][col].textContent === animal) {
+        for(let r = row; r < BOARD_SIZE; r++){
+          if(grid[r][col].textContent === animal){
+            matchedCells.add(grid[r][col]);
+          } else {
+            break;
+          }
+        }
+      }
+    }
+  }
+  matchedCells.forEach((cell) => {
+    cell.textContent = '';
+    score += 10;
+  });
+  updateScore();
+}
+
+// Update the board after removing matches
+function updateBoard() {
+    // Drop down animals
+    for (let col = 0; col < BOARD_SIZE; col++) {
+        let emptyRow = BOARD_SIZE - 1;
+        for (let row = BOARD_SIZE - 1; row >= 0; row--) {
+            if (grid[row][col].textContent !== '') {
+                grid[emptyRow][col].textContent = grid[row][col].textContent;
+                if (row !== emptyRow) {
+                    grid[row][col].textContent = '';
+                }
+                emptyRow--;
+            }
+        }
+    }
+
+    // Fill empty spaces with new animals
+    for (let col = 0; col < BOARD_SIZE; col++) {
+        for (let row = 0; row < BOARD_SIZE; row++) {
+            if (grid[row][col].textContent === '') {
+                grid[row][col].textContent = getRandomAnimal();
+            }
+        }
+    }
+    if(findMatches()){
+        removeMatches();
+        updateBoard();
     }
 }
 
-// Setup timer
-function setupTimer() {
-  timer = 0;
-  timerDisplay.textContent = `Time: ${timer}`;
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timer++;
-    timerDisplay.textContent = `Time: ${timer}`;
-  }, 1000);
+// Update the score display
+function updateScore() {
+  scoreDisplay.textContent = `Score: ${score}`;
 }
 
 // Start the game
