@@ -1,128 +1,162 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const gameCanvas = document.getElementById('gameCanvas');
+const message = document.getElementById('message');
+const resetButton = document.getElementById('resetButton');
 
-const gravity = 0.5;
-const jumpForce = -10;
-const moveSpeed = 3;
+let board = [];
+let currentPlayer = 1; // 1 for red, 2 for yellow
+let gameActive = true;
 
-// Player
-const player = {
-    x: 50,
-    y: 100,
-    width: 30,
-    height: 30,
-    color: 'red',
-    velocityY: 0,
-    velocityX: 0,
-    isJumping: false,
-    isMovingLeft: false,
-    isMovingRight: false,
-    draw: function() {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-    },
-    update: function() {
-        this.velocityY += gravity;
-        this.y += this.velocityY;
-        this.x += this.velocityX;
-
-        // Keep player within the canvas horizontally
-        if (this.x < 0) {
-            this.x = 0;
-        } else if (this.x + this.width > canvas.width) {
-            this.x = canvas.width - this.width;
+function createBoard() {
+    for (let row = 0; row < 6; row++) {
+        board[row] = [];
+        for (let col = 0; col < 7; col++) {
+            board[row][col] = 0;
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.row = row;
+            cell.dataset.col = col;
+            cell.addEventListener('click', handleCellClick);
+            gameCanvas.appendChild(cell);
         }
-
-        // Keep player within the canvas vertically
-        if (this.y + this.height > canvas.height) {
-            this.y = canvas.height - this.height;
-            this.velocityY = 0;
-            this.isJumping = false;
-        }
-    },
-    jump: function() {
-        if (!this.isJumping) {
-            this.velocityY = jumpForce;
-            this.isJumping = true;
-        }
-    },
-    moveLeft: function() {
-        this.velocityX = -moveSpeed;
-    },
-    moveRight: function() {
-        this.velocityX = moveSpeed;
-    },
-    stopMoving: function() {
-        this.velocityX = 0;
     }
-};
-
-// Platforms
-const platforms = [
-    { x: 0, y: canvas.height - 20, width: canvas.width, height: 20, color: 'green' }, // Ground
-    { x: 150, y: 250, width: 100, height: 20, color: 'green' },
-    { x: 350, y: 150, width: 100, height: 20, color: 'green' },
-    { x: 500, y: 300, width: 80, height: 20, color: 'green' },
-    { x: 20, y: 350, width: 80, height: 20, color: 'green' },
-];
-
-function drawPlatforms() {
-    platforms.forEach(platform => {
-        ctx.fillStyle = platform.color;
-        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-    });
 }
 
-// Collision detection
-function checkCollision(rect1, rect2) {
-    return (
-        rect1.x < rect2.x + rect2.width &&
-        rect1.x + rect1.width > rect2.x &&
-        rect1.y < rect2.y + rect2.height &&
-        rect1.y + rect1.height > rect2.y
-    );
-}
-
-// Game loop
-function update() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    player.update();
-
-    // Platform collision
-    platforms.forEach(platform => {
-        if (checkCollision(player, platform)) {
-            if (player.velocityY > 0) {
-                player.y = platform.y - player.height;
-                player.velocityY = 0;
-                player.isJumping = false;
+function drawBoard() {
+    for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 7; col++) {
+            const cell = gameCanvas.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            cell.innerHTML = '';
+            if (board[row][col] !== 0) {
+                const disc = document.createElement('div');
+                disc.classList.add('disc', board[row][col] === 1 ? 'red' : 'yellow');
+                cell.appendChild(disc);
             }
         }
-    });
-
-    drawPlatforms();
-    player.draw();
-
-    requestAnimationFrame(update);
+    }
 }
 
-// Event listeners
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowUp') {
-        player.jump();
-    }
-    if (e.key === 'ArrowLeft') {
-        player.moveLeft();
-    }
-    if (e.key === 'ArrowRight') {
-        player.moveRight();
-    }
-});
+function handleCellClick(event) {
+    if (!gameActive) return;
 
-document.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        player.stopMoving();
-    }
-});
+    const cell = event.target;
+    const col = parseInt(cell.dataset.col);
 
-update();
+    if (dropDisc(col)) {
+        drawBoard();
+        if (checkWinner()) {
+            endGame();
+        } else if (checkDraw()) {
+            drawGame();
+        } else {
+            switchPlayer();
+        }
+    }
+}
+
+function dropDisc(col) {
+    for (let row = 5; row >= 0; row--) {
+        if (board[row][col] === 0) {
+            board[row][col] = currentPlayer;
+            return true;
+        }
+    }
+    return false;
+}
+
+function checkWinner() {
+    // Check horizontal
+    for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 4; col++) {
+            if (
+                board[row][col] !== 0 &&
+                board[row][col] === board[row][col + 1] &&
+                board[row][col] === board[row][col + 2] &&
+                board[row][col] === board[row][col + 3]
+            ) {
+                return true;
+            }
+        }
+    }
+
+    // Check vertical
+    for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 7; col++) {
+            if (
+                board[row][col] !== 0 &&
+                board[row][col] === board[row + 1][col] &&
+                board[row][col] === board[row + 2][col] &&
+                board[row][col] === board[row + 3][col]
+            ) {
+                return true;
+            }
+        }
+    }
+
+    // Check diagonal (top-left to bottom-right)
+    for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 4; col++) {
+            if (
+                board[row][col] !== 0 &&
+                board[row][col] === board[row + 1][col + 1] &&
+                board[row][col] === board[row + 2][col + 2] &&
+                board[row][col] === board[row + 3][col + 3]
+            ) {
+                return true;
+            }
+        }
+    }
+
+    // Check diagonal (top-right to bottom-left)
+    for (let row = 0; row < 3; row++) {
+        for (let col = 3; col < 7; col++) {
+            if (
+                board[row][col] !== 0 &&
+                board[row][col] === board[row + 1][col - 1] &&
+                board[row][col] === board[row + 2][col - 2] &&
+                board[row][col] === board[row + 3][col - 3]
+            ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function checkDraw() {
+    for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 7; col++) {
+            if (board[row][col] === 0) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function switchPlayer() {
+    currentPlayer = currentPlayer === 1 ? 2 : 1;
+    message.textContent = `Player ${currentPlayer}'s turn (${currentPlayer === 1 ? 'Red' : 'Yellow'})`;
+}
+
+function endGame() {
+    gameActive = false;
+    message.textContent = `Player ${currentPlayer} wins! (${currentPlayer === 1 ? 'Red' : 'Yellow'})`;
+}
+
+function drawGame(){
+    gameActive = false;
+    message.textContent = `It's a draw!`;
+}
+
+function resetGame() {
+    board = [];
+    currentPlayer = 1;
+    gameActive = true;
+    message.textContent = "Player 1's turn (Red)";
+    gameCanvas.innerHTML = '';
+    createBoard();
+}
+
+createBoard();
+resetButton.addEventListener('click', resetGame);
