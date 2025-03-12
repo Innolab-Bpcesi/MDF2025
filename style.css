@@ -1,6 +1,6 @@
 body {
     font-family: sans-serif;
-    background-color: #000;
+    background-color: #333;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -16,13 +16,6 @@ body {
   }
   
   #gameCanvas {
-    background-color: #000;
-  }
-  
-  .game-info {
-    display: flex;
-    justify-content: space-around;
-    width: 800px;
-    margin-bottom: 10px;
+    background-color: #777;
   }
   
